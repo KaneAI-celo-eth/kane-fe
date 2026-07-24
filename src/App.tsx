@@ -1,20 +1,19 @@
-import { useState } from "react";
 import { WagmiProvider, useChainId, useConnection } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { Address } from "viem";
 import { wagmiConfig } from "./config/wagmi";
 import { FACTORY } from "./config/contracts";
+import { useExecutor } from "./hooks/useExecutor";
 import { ConnectWallet } from "./components/ConnectWallet";
-import { CreateVault } from "./components/CreateVault";
+import { AuthorizeAgent } from "./components/AuthorizeAgent";
 import { PolicyCard } from "./components/PolicyCard";
 
 const queryClient = new QueryClient();
 
 function Console() {
-  const { isConnected } = useConnection();
+  const { address, isConnected } = useConnection();
   const chainId = useChainId();
-  const [vault, setVault] = useState<Address>();
   const factory = FACTORY[chainId];
+  const { executor } = useExecutor(factory, address);
 
   return (
     <div className="stack">
@@ -26,9 +25,9 @@ function Console() {
       {isConnected && (
         <>
           <section className="card">
-            <h2>Vault</h2>
+            <h2>Authorize Agent</h2>
             {factory ? (
-              <CreateVault onVault={setVault} />
+              <AuthorizeAgent factory={factory} />
             ) : (
               <p className="muted">
                 No factory configured for this chain — deploy it and set{" "}
@@ -37,10 +36,10 @@ function Console() {
             )}
           </section>
 
-          {vault && (
+          {executor && address && (
             <section className="card">
               <h2>Policy</h2>
-              <PolicyCard vault={vault} />
+              <PolicyCard executor={executor} owner={address} />
             </section>
           )}
         </>

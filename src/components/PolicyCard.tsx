@@ -1,26 +1,54 @@
 import type { Address } from "viem";
-import { useVaultBalance, useVaultPolicy } from "../hooks/useVault";
+import { useReadContract } from "wagmi";
+import { kaneExecutorAbi } from "../abi/kaneExecutor";
+import { USDC_CELO } from "../config/contracts";
+import { MANAGER_ROLE, useTokenPolicy } from "../hooks/useExecutor";
 
-export function PolicyCard({ vault }: { vault: Address }) {
-  const { data: policy, isLoading } = useVaultPolicy(vault);
-  const { data: balance } = useVaultBalance(vault);
+const ZERO = "0x0000000000000000000000000000000000000000";
+
+/** 6-decimal USDC base units → human string. */
+function usdc(v: bigint): string {
+  return `${Number(v) / 1e6} USDC`;
+}
+
+export function PolicyCard({ executor, owner }: { executor: Address; owner: Address }) {
+  const { data: policy, isLoading } = useTokenPolicy(executor, USDC_CELO);
+  const { data: agent } = useReadContract({
+    address: executor,
+    abi: kaneExecutorAbi,
+    functionName: "agent",
+  });
+  const { data: version } = useReadContract({
+    address: executor,
+    abi: kaneExecutorAbi,
+    functionName: "version",
+  });
+  const { data: revoked } = useReadContract({
+    address: executor,
+    abi: kaneExecutorAbi,
+    functionName: "revoked",
+  });
+  const { data: isManager } = useReadContract({
+    address: executor,
+    abi: kaneExecutorAbi,
+    functionName: "hasRole",
+    args: [MANAGER_ROLE, owner],
+  });
 
   if (isLoading || !policy) return <p className="muted">Loading policy…</p>;
 
-  // [agent, budget, spent, perTxCap, windowCap, windowSpent, windowDuration, windowStart, expiry, version, revoked]
-  const [agent, budget, spent, perTxCap, windowCap, , , , expiry, version, revoked] = policy;
+  const agentSet = Boolean(agent && agent !== ZERO);
 
   return (
     <dl className="grid">
-      <Row k="Agent" v={agent} mono />
-      <Row k="Version" v={String(version)} />
+      <Row k="Owner (MANAGER)" v={isManager ? "yes" : "no"} />
+      <Row k="Agent" v={agentSet ? (agent as string) : "not set"} mono={agentSet} />
+      <Row k="Version" v={version !== undefined ? String(version) : "—"} />
       <Row k="Revoked" v={revoked ? "yes" : "no"} />
-      <Row k="Budget" v={budget.toString()} />
-      <Row k="Spent" v={spent.toString()} />
-      <Row k="Per-tx cap" v={perTxCap.toString()} />
-      <Row k="Window cap" v={windowCap === 0n ? "off" : windowCap.toString()} />
-      <Row k="Expiry" v={expiry === 0n ? "none" : new Date(Number(expiry) * 1000).toLocaleString()} />
-      <Row k="Balance" v={balance !== undefined ? balance.toString() : "—"} />
+      <Row k="USDC per-tx cap" v={usdc(policy.perTxCap)} />
+      <Row k="USDC budget" v={usdc(policy.budget)} />
+      <Row k="USDC spent" v={usdc(policy.spent)} />
+      <Row k="USDC window cap" v={policy.windowCap === 0n ? "off" : usdc(policy.windowCap)} />
     </dl>
   );
 }
