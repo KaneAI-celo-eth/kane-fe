@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useChainId, useConnection, useReadContract, useWriteContract } from "wagmi";
-import { isAddress, type Address } from "viem";
+import { erc20Abi, isAddress, maxUint256, type Address } from "viem";
 import { kaneExecutorAbi } from "../abi/kaneExecutor";
 import {
   aaveDataProviderAbi,
@@ -28,6 +28,8 @@ const STEP_LABELS = [
   "Allow supply (recipient-bound)",
   "Allow withdraw (recipient-bound)",
   "Seed forbidden selectors",
+  "Approve USDC to executor",
+  "Approve aUSDC to executor",
 ];
 const DONE = STEP_LABELS.length;
 
@@ -155,6 +157,27 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
           dataSuffix: attributionSuffix,
         });
         return;
+      case 8:
+        // The executor pulls via transferFrom(owner) — the owner must approve it first.
+        if (!executor) return;
+        writeExecutor({
+          address: USDC_CELO,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [executor, maxUint256],
+          dataSuffix: attributionSuffix,
+        });
+        return;
+      case 9:
+        if (!executor || !aUsdc) return;
+        writeExecutor({
+          address: aUsdc,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [executor, maxUint256],
+          dataSuffix: attributionSuffix,
+        });
+        return;
     }
   }
 
@@ -170,7 +193,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
       ? true
       : step === 1
         ? Boolean(executor && agentValid)
-        : step === 3
+        : step === 3 || step === 9
           ? Boolean(executor && aUsdc)
           : Boolean(executor));
 
@@ -212,7 +235,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
         </label>
       )}
 
-      {step === 3 && !aUsdc && (
+      {(step === 3 || step === 9) && !aUsdc && (
         <p className="muted small">Resolving aUSDC from Aave's data provider…</p>
       )}
 
