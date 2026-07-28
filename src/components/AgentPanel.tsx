@@ -128,8 +128,9 @@ export function AgentPanel() {
         ))}
       </aside>
 
-      {/* Conversation column */}
-      <div className="flex-1 min-w-0 flex flex-col gap-4">
+      {/* Conversation column — capped + centered so prose stays readable inside the full-width shell */}
+      <div className="flex-1 min-w-0 flex md:justify-center">
+        <div className="w-full max-w-3xl flex flex-col gap-4">
         {/* mobile: reveal the sessions list */}
         <button
           onClick={() => setSidebarOpen((v) => !v)}
@@ -232,6 +233,7 @@ export function AgentPanel() {
             </p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

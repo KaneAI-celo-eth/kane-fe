@@ -100,7 +100,7 @@ export function Console() {
             </nav>
 
             {/* content */}
-            <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto px-6 md:px-10 py-10 md:py-12 anim-fade">
+            <div className="relative z-10 flex-1 w-full mx-auto px-6 md:px-32 py-10 md:py-12 anim-fade">
               <p className="text-white/50 text-xs tracking-[0.2em] uppercase mb-3">Console</p>
               <h1 className="text-white text-3xl md:text-4xl font-normal leading-[1.1] tracking-[-0.03em]">
                 Authorize your agent.
