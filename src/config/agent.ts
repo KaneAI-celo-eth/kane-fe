@@ -29,12 +29,23 @@ export type IntentResult = {
   error?: string;
 };
 
-/** POST /intent — the model proposes a concrete action (and dry-runs it when an executor exists). */
-export async function proposeIntent(intent: string, owner?: string): Promise<IntentResult> {
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
+/** POST /intent — the model proposes a concrete action (and dry-runs it when an executor exists).
+ *  `history` carries prior turns for a multi-turn chat. */
+export async function proposeIntent(
+  intent: string,
+  owner?: string,
+  history?: ChatTurn[],
+): Promise<IntentResult> {
   const res = await fetch(`${AGENT_API}/intent`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(owner ? { intent, owner } : { intent }),
+    body: JSON.stringify({
+      intent,
+      ...(owner ? { owner } : {}),
+      ...(history && history.length ? { history } : {}),
+    }),
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
