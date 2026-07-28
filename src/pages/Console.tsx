@@ -7,9 +7,22 @@ import { useExecutor } from "../hooks/useExecutor";
 import { ConnectWallet } from "../components/ConnectWallet";
 import { AuthorizeAgent } from "../components/AuthorizeAgent";
 import { PolicyCard } from "../components/PolicyCard";
-import "../console.css";
+import { AgentPanel } from "../components/AgentPanel";
+import { KaneMark } from "../components/KaneMark";
 
 const queryClient = new QueryClient();
+
+const DOCS_URL = "https://github.com/KaneAI-celo-eth/.github";
+
+function Card({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
+  return (
+    <section className="border border-white/15 btn-cut-sm p-5 md:p-6">
+      <p className="text-white/45 text-xs tracking-[0.18em] uppercase mb-2">{label}</p>
+      {desc && <p className="text-white/55 text-sm leading-relaxed mb-4 max-w-xl">{desc}</p>}
+      {children}
+    </section>
+  );
+}
 
 function ConsoleBody() {
   const { address, isConnected } = useConnection();
@@ -18,44 +31,45 @@ function ConsoleBody() {
   const { executor } = useExecutor(factory, address);
 
   return (
-    <div className="stack">
-      <section className="card">
-        <h2>Wallet</h2>
-        <p className="desc">
-          Connect the wallet that owns the funds. This is the only key that can set policy — the
-          agent never holds it.
-        </p>
+    <div className="flex flex-col gap-4">
+      <Card
+        label="Agent · the model advises"
+        desc="Tell the agent what you want in plain language. It proposes one concrete move — never an address — then the on-chain policy gate decides whether it runs."
+      >
+        <AgentPanel />
+      </Card>
+
+      <Card
+        label="Wallet"
+        desc="Connect the wallet that owns the funds. This is the only key that can set policy — the agent never holds it."
+      >
         <ConnectWallet />
-      </section>
+      </Card>
 
       {isConnected && (
         <>
-          <section className="card">
-            <h2>Authorize Agent</h2>
-            <p className="desc">
-              Deploy your personal executor and hand the agent a bounded mandate: spending caps,
-              an allowlist of venues (here, Aave V3), and output locked to your address. Nothing
-              in these steps grants custody — and you can revoke the mandate at any time.
-            </p>
+          <Card
+            label="Authorize agent"
+            desc="Deploy your personal executor and hand the agent a bounded mandate: spending caps, an allowlist of venues (Aave V3), and output locked to your address. Nothing here grants custody — revoke anytime."
+          >
             {factory ? (
               <AuthorizeAgent factory={factory} />
             ) : (
-              <p className="muted">
+              <p className="text-white/55 text-sm leading-relaxed">
                 No factory configured for this chain yet — the console goes live with the Celo
-                mainnet deployment. (<code>VITE_FACTORY_…</code>)
+                mainnet deployment.{" "}
+                <code className="font-mono text-white/70">VITE_FACTORY_…</code>
               </p>
             )}
-          </section>
+          </Card>
 
           {executor && address && (
-            <section className="card">
-              <h2>Policy</h2>
-              <p className="desc">
-                The guardrails currently enforced on-chain. The agent physically cannot exceed
-                these — the contract reverts anything outside them.
-              </p>
+            <Card
+              label="Policy"
+              desc="The guardrails currently enforced on-chain. The agent physically cannot exceed these — the contract reverts anything outside them."
+            >
               <PolicyCard executor={executor} owner={address} />
-            </section>
+            </Card>
           )}
         </>
       )}
@@ -65,20 +79,49 @@ function ConsoleBody() {
 
 export function Console() {
   return (
-    <div className="kane-console">
-      <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <header className="topbar">
-            <div className="brand">
-              <Link to="/">KaneAI</Link> <span className="muted">Console</span>
-            </div>
-            <div className="tagline small">The model advises; the chain decides.</div>
-          </header>
-          <main className="wrap">
-            <ConsoleBody />
-          </main>
-        </QueryClientProvider>
-      </WagmiProvider>
+    <div className="min-h-screen w-full bg-black p-3 md:p-4 font-inter">
+      <div className="w-full min-h-[calc(100vh-1.5rem)] md:min-h-[calc(100vh-2rem)] rounded-2xl relative overflow-hidden bg-black flex flex-col">
+        {/* faint watermark mark */}
+        <KaneMark className="pointer-events-none absolute -right-24 -bottom-24 w-[520px] h-[520px] opacity-[0.04]" />
+
+        {/* nav */}
+        <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 pt-6 md:pt-8">
+          <Link to="/" className="flex items-center gap-3">
+            <KaneMark className="w-11 h-11 md:w-12 md:h-12" />
+            <span className="text-white text-[10px] md:text-xs tracking-[0.4em] font-light">
+              K A N E A I
+            </span>
+          </Link>
+          <a
+            href={DOCS_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="hidden md:block px-5 py-2.5 text-white text-sm hover:bg-white/10 btn-cut-border"
+          >
+            <span>How it works</span>
+          </a>
+        </nav>
+
+        {/* content */}
+        <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto px-6 md:px-10 py-10 md:py-12 anim-fade">
+          <p className="text-white/50 text-xs tracking-[0.2em] uppercase mb-3">Console</p>
+          <h1 className="text-white text-3xl md:text-4xl font-normal leading-[1.1] tracking-[-0.03em]">
+            Authorize your agent.
+          </h1>
+          <p className="text-white/65 text-base leading-relaxed mt-4 max-w-2xl">
+            The model proposes; the on-chain policy gate decides. Set the limits here — the agent
+            works only inside them, and every position settles back to your wallet.
+          </p>
+
+          <div className="mt-8">
+            <WagmiProvider config={wagmiConfig}>
+              <QueryClientProvider client={queryClient}>
+                <ConsoleBody />
+              </QueryClientProvider>
+            </WagmiProvider>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

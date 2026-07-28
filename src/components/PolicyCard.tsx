@@ -35,13 +35,13 @@ export function PolicyCard({ executor, owner }: { executor: Address; owner: Addr
     args: [MANAGER_ROLE, owner],
   });
 
-  if (isLoading || !policy) return <p className="muted">Loading policy…</p>;
+  if (isLoading || !policy) return <p className="text-white/50 text-sm">Loading policy…</p>;
 
   const agentSet = Boolean(agent && agent !== ZERO);
 
   return (
-    <div className="stack">
-      <dl className="grid">
+    <div className="flex flex-col gap-4">
+      <dl className="grid grid-cols-[minmax(110px,auto)_1fr] gap-x-4 gap-y-2 text-sm m-0">
         <Row k="Owner (MANAGER)" v={isManager ? "yes" : "no"} />
         <Row k="Agent" v={agentSet ? (agent as string) : "not set"} mono={agentSet} />
         <Row k="Version" v={version !== undefined ? String(version) : "—"} />
@@ -51,9 +51,10 @@ export function PolicyCard({ executor, owner }: { executor: Address; owner: Addr
         <Row k="USDC spent" v={usdc(policy.spent)} />
         <Row k="USDC window cap" v={policy.windowCap === 0n ? "off" : usdc(policy.windowCap)} />
       </dl>
-      <p className="hint">
-        <strong>Revoked</strong> is your kill-switch — flip it and the agent is frozen instantly,
-        whatever it proposes. Caps are per-token and enforced by the contract, not the model.
+      <p className="text-white/55 text-sm leading-relaxed">
+        <strong className="text-white">Revoked</strong> is your kill-switch — flip it and the agent
+        is frozen instantly, whatever it proposes. Caps are per-token and enforced by the contract,
+        not the model.
       </p>
     </div>
   );
@@ -62,8 +63,8 @@ export function PolicyCard({ executor, owner }: { executor: Address; owner: Addr
 function Row({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
   return (
     <>
-      <dt>{k}</dt>
-      <dd className={mono ? "mono" : undefined}>{v}</dd>
+      <dt className="text-white/45">{k}</dt>
+      <dd className={`m-0 break-all ${mono ? "font-mono text-white/80" : "text-white/80"}`}>{v}</dd>
     </>
   );
 }
