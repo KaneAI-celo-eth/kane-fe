@@ -4,7 +4,8 @@ import { AGENT_API, proposeIntent, type IntentResult } from "../config/agent";
 
 const PRESETS = [
   "I have 500 USDC sitting idle — put it to work earning yield.",
-  "Move 200 USDC into Aave.",
+  "Swap 100 cUSD to cEUR.",
+  "What's the best USDC yield on Celo right now?",
   "Markets look risky — pull 100 USDC back to my wallet.",
 ];
 
@@ -124,6 +125,55 @@ function Proposal({ result }: { result: IntentResult }) {
       <div className="border border-white/15 btn-cut-sm p-4 md:p-5">
         <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">The agent says</p>
         <p className="text-white/85 text-sm md:text-base leading-relaxed whitespace-pre-line">{a.text}</p>
+      </div>
+    );
+  }
+
+  if (a.kind === "swap") {
+    const q = result.quote;
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="border border-white/25 btn-cut-sm p-4 md:p-5">
+          <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">The model advises</p>
+          {q ? (
+            <>
+              <p className="text-white text-xl md:text-2xl font-normal tracking-[-0.01em]">
+                Swap {a.amount} {a.from}{" "}
+                <span className="text-white/45 text-base">
+                  → ≈ {Number(q.amountOutHuman).toLocaleString(undefined, { maximumFractionDigits: 6 })} {a.to}
+                </span>
+              </p>
+              <p className="text-white/35 text-xs font-mono mt-2 break-all">
+                via Ubeswap V2 · {q.hops} hop{q.hops > 1 ? "s" : ""} · 1% max slippage · pool-depth verified ·
+                recipient bound to you
+              </p>
+            </>
+          ) : (
+            <p className="text-sm" style={{ color: "#f87171" }}>
+              Can't route this swap — {result.error ?? "no pool / too thin on Ubeswap V2"}.
+            </p>
+          )}
+        </div>
+        {q && (
+          <div className="border border-white/12 btn-cut-sm p-4">
+            <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-1.5">The chain decides</p>
+            {result.dryRun ? (
+              result.dryRun.ok ? (
+                <p className="text-white text-sm">Allowed ✓ — the input pull is within your on-chain policy.</p>
+              ) : (
+                <p className="text-sm" style={{ color: "#f87171" }}>
+                  Blocked — {result.dryRun.reason ?? "outside your policy"}.
+                </p>
+              )
+            ) : (
+              <p className="text-white/55 text-sm leading-relaxed">
+                Authorize an agent (with {a.from} provisioned + Ubeswap allowlisted) to dry-run this against
+                the gate. Output is <span className="text-white">bound to your wallet</span>; nothing executes
+                until the gate approves.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     );
   }

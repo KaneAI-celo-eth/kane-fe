@@ -6,14 +6,26 @@ export type ProposedAction =
   | { kind: "answer"; text: string }
   | { kind: "supply"; amount: string }
   | { kind: "withdraw"; amount: string }
+  | { kind: "swap"; from: string; to: string; amount: string }
   | { kind: "noop"; reason: string };
 
 export type DryRun = { ok: boolean; reason?: string };
+
+export type SwapQuote = {
+  from: string;
+  to: string;
+  amountIn: string;
+  amountOut: string;
+  amountOutHuman: string;
+  amountOutMin: string;
+  hops: number;
+};
 
 export type IntentResult = {
   action: ProposedAction;
   executor?: string;
   dryRun?: DryRun;
+  quote?: SwapQuote;
   error?: string;
 };
 
