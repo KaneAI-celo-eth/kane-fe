@@ -5,7 +5,7 @@ const VIDEO_SRC = "/kane-bg.mp4";
 
 // Placeholder public destinations until a hosted console/docs site exists.
 const GITHUB_ORG = "https://github.com/KaneAI-celo-eth";
-const DOCS_URL = "https://github.com/KaneAI-celo-eth/source-of-truth";
+const DOCS_URL = "https://github.com/KaneAI-celo-eth/.github"; // "How it works" explainer
 
 /**
  * Four quarter-circle blades rotated around the center, each carved by a
