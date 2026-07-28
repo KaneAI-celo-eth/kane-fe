@@ -104,6 +104,15 @@ export function AgentPanel() {
 function Proposal({ result }: { result: IntentResult }) {
   const a = result.action;
 
+  if (a.kind === "answer") {
+    return (
+      <div className="border border-white/15 btn-cut-sm p-4 md:p-5">
+        <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">The agent says</p>
+        <p className="text-white/85 text-sm md:text-base leading-relaxed whitespace-pre-line">{a.text}</p>
+      </div>
+    );
+  }
+
   if (a.kind === "noop") {
     return (
       <div className="border border-white/12 btn-cut-sm p-4">
@@ -155,7 +164,7 @@ function ChainVerdict({ result }: { result: IntentResult }) {
 
   // Pre-deploy: an honest client-side preview against the demo caps, clearly labelled.
   const a = result.action;
-  const amt = a.kind === "noop" ? 0 : Number(a.amount) / 1e6;
+  const amt = a.kind === "supply" || a.kind === "withdraw" ? Number(a.amount) / 1e6 : 0;
   const within = amt <= DEMO_PER_TX_USDC;
   return (
     <div className="border border-white/12 btn-cut-sm p-4">

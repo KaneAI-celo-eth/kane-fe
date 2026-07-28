@@ -3,6 +3,7 @@ export const AGENT_API =
   (import.meta.env as Record<string, string | undefined>).VITE_AGENT_API ?? "http://localhost:8787";
 
 export type ProposedAction =
+  | { kind: "answer"; text: string }
   | { kind: "supply"; amount: string }
   | { kind: "withdraw"; amount: string }
   | { kind: "noop"; reason: string };
