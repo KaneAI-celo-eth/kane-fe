@@ -48,6 +48,18 @@ export function ExecuteButton({
   });
   const needsApprove = allowance !== undefined && allowance < amount;
 
+  // The executor pulls this token from the owner, so the owner must actually hold it.
+  const { data: balance } = useReadContract({
+    address: token,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [owner],
+    query: { enabled: Boolean(token) },
+  });
+  const insufficient = balance !== undefined && balance < amount;
+  const fmt = (v: bigint) => (Number(v) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const tokenLabel = action.kind === "supply" ? "USDC" : "aUSDC";
+
   const [phase, setPhase] = useState<"idle" | "approving" | "executing">("idle");
   const [result, setResult] = useState<{ txHash?: string; error?: string } | null>(null);
 
@@ -88,23 +100,28 @@ export function ExecuteButton({
     : needsApprove
       ? "Approve & Execute"
       : "Execute";
-  const tokenLabel = action.kind === "supply" ? "USDC" : "aUSDC";
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={run}
-          disabled={busy || !token}
+          disabled={busy || !token || insufficient}
           className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
         >
           {label}
         </button>
-        {needsApprove && !busy && !result && (
-          <span className="text-white/40 text-xs">
-            Approves {tokenLabel} once (your signature), then the agent executes.
-          </span>
-        )}
+        {balance !== undefined &&
+          (insufficient ? (
+            <span className="text-xs" style={{ color: "#f87171" }}>
+              You have {fmt(balance)} {tokenLabel} — need {fmt(amount)} to {action.kind}.
+            </span>
+          ) : (
+            <span className="text-white/40 text-xs">
+              Balance: {fmt(balance)} {tokenLabel}
+              {needsApprove && !busy && !result ? " · approves once, then executes" : ""}
+            </span>
+          ))}
       </div>
       {result?.txHash && (
         <p className="text-white text-sm">

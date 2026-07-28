@@ -394,9 +394,8 @@ function Proposal({
           {a.kind === "supply" ? "Supply" : "Withdraw"} {usdc(a.amount)}{" "}
           <span className="text-white/45 text-base">→ Aave V3</span>
         </p>
-        <p className="text-white/35 text-xs font-mono mt-2 break-all">
-          {JSON.stringify({ kind: a.kind, amount: a.amount })} · no address — the runtime resolves it,
-          bound to you
+        <p className="text-white/35 text-xs mt-2">
+          No address — the runtime resolves it, and the position is bound to your wallet.
         </p>
       </div>
 
