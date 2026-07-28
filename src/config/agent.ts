@@ -31,6 +31,28 @@ export type IntentResult = {
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
+export type ExecuteResult = {
+  action: ProposedAction;
+  executed: boolean;
+  txHash?: string;
+  dryRun?: DryRun;
+  error?: string;
+};
+
+/** POST /execute — the agent (kane-be's central signer) executes EXACTLY this proposed action
+ *  against the owner's executor: dry-run → attribution-tagged `execute()`. The owner grants the
+ *  ERC-20 allowance separately (just-in-time), in their own wallet, before calling this. */
+export async function executeAction(action: ProposedAction, owner: string): Promise<ExecuteResult> {
+  const res = await fetch(`${AGENT_API}/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ owner, action }),
+  });
+  const body = (await res.json().catch(() => ({}))) as ExecuteResult & { error?: string };
+  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+  return body;
+}
+
 /** GET /health → KaneAI's dedicated agent signer address (the key the runtime signs with),
  *  or null if the backend has no key configured / is unreachable. The console authorizes THIS
  *  address — the user never has to know or type it. */

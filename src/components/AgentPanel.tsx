@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useConnection } from "wagmi";
+import type { Address } from "viem";
 import { AGENT_API, proposeIntent, type ChatTurn, type IntentResult } from "../config/agent";
 import { useChatSessions } from "../hooks/useChatSessions";
+import { ExecuteButton } from "./ExecuteButton";
 
 const PRESETS = [
   "I have 500 USDC sitting idle — put it to work earning yield.",
@@ -26,7 +28,7 @@ function summarize(r: IntentResult): string {
   return `No action: ${a.reason}`;
 }
 
-export function AgentPanel() {
+export function AgentPanel({ executor }: { executor?: Address }) {
   const { address } = useConnection();
   const chat = useChatSessions();
   const { active, sessions, activeId, newSession, ensureSession, selectSession, deleteSession, updateMessages, getMessages } = chat;
@@ -152,7 +154,7 @@ export function AgentPanel() {
                 </div>
               ) : (
                 <div key={i} className="flex flex-col gap-3">
-                  <Proposal result={m.result} />
+                  <Proposal result={m.result} executor={executor} owner={address ?? undefined} />
                   {m.result.action.kind === "answer" && (
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-white/40 text-xs">Act on it:</span>
@@ -306,7 +308,15 @@ function AnswerText({ text }: { text: string }) {
   return <div className="text-white/85 text-sm md:text-base flex flex-col">{blocks}</div>;
 }
 
-function Proposal({ result }: { result: IntentResult }) {
+function Proposal({
+  result,
+  executor,
+  owner,
+}: {
+  result: IntentResult;
+  executor?: Address;
+  owner?: Address;
+}) {
   const a = result.action;
 
   if (a.kind === "answer") {
@@ -391,6 +401,9 @@ function Proposal({ result }: { result: IntentResult }) {
       </div>
 
       <ChainVerdict result={result} />
+      {executor && owner && (a.kind === "supply" || a.kind === "withdraw") && (
+        <ExecuteButton action={a} executor={executor} owner={owner} />
+      )}
     </div>
   );
 }

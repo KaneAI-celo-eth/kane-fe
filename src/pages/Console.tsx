@@ -14,7 +14,7 @@ const queryClient = new QueryClient();
 
 function Card({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
   return (
-    <section className="border border-white/15 btn-cut-sm p-5 md:p-6 bg-black/40 backdrop-blur-md">
+    <section className="border border-white/15 btn-cut-sm p-5 md:p-6 bg-black/40 backdrop-blur-md h-full min-h-screen">
       <p className="text-white/45 text-xs tracking-[0.18em] uppercase mb-2">{label}</p>
       {desc && <p className="text-white/55 text-sm leading-relaxed mb-4 max-w-xl">{desc}</p>}
       {children}
@@ -34,7 +34,7 @@ function ConsoleBody() {
         label="Agent · the model advises"
         desc="Tell the agent what you want in plain language. It proposes one concrete move — never an address — then the on-chain policy gate decides whether it runs."
       >
-        <AgentPanel />
+        <AgentPanel executor={executor} />
       </Card>
 
       {isConnected ? (
@@ -84,7 +84,7 @@ export function Console() {
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/75 to-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/50 to-black/70" />
 
         <WagmiProvider config={wagmiConfig}>
           <QueryClientProvider client={queryClient}>
