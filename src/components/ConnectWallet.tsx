@@ -20,7 +20,7 @@ export function ConnectWallet() {
     const injected = connectors[0];
     return (
       <button
-        className="px-7 py-3.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-50 btn-cut"
+        className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-50 btn-cut"
         disabled={!injected || isPending}
         onClick={() => injected && connect({ connector: injected })}
       >

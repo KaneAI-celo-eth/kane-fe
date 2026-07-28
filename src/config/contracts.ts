@@ -1,10 +1,15 @@
 import type { Address } from "viem";
 import { celo, celoSepolia } from "./chains";
 
-/** KaneExecutorFactory address per chain (set after deploy, via .env). */
+/**
+ * KaneExecutorFactory address per chain. The mainnet factory is the canonical deployed
+ * singleton (Celo mainnet, 2026-07-28, verified on Celoscan) — baked in like USDC/Aave below;
+ * `VITE_FACTORY_*` still overrides it per build (e.g. an anvil fork).
+ */
+const CELO_FACTORY = "0xB746Bf016Ac4E57c71E6736e1a4082b5baEeb791";
 export const FACTORY: Record<number, Address | undefined> = {
-  [celo.id]: import.meta.env.VITE_FACTORY_CELO || undefined,
-  [celoSepolia.id]: import.meta.env.VITE_FACTORY_SEPOLIA || undefined,
+  [celo.id]: (import.meta.env.VITE_FACTORY_CELO as Address | undefined) || CELO_FACTORY,
+  [celoSepolia.id]: (import.meta.env.VITE_FACTORY_SEPOLIA as Address | undefined) || undefined,
 };
 
 /** Resolve the factory address for a chain (undefined until deployed + set in .env). */

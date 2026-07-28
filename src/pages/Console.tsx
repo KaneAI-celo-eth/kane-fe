@@ -39,14 +39,7 @@ function ConsoleBody() {
         <AgentPanel />
       </Card>
 
-      <Card
-        label="Wallet"
-        desc="Connect the wallet that owns the funds. This is the only key that can set policy — the agent never holds it."
-      >
-        <ConnectWallet />
-      </Card>
-
-      {isConnected && (
+      {isConnected ? (
         <>
           <Card
             label="Authorize agent"
@@ -56,9 +49,8 @@ function ConsoleBody() {
               <AuthorizeAgent factory={factory} />
             ) : (
               <p className="text-white/55 text-sm leading-relaxed">
-                No factory configured for this chain yet — the console goes live with the Celo
-                mainnet deployment.{" "}
-                <code className="font-mono text-white/70">VITE_FACTORY_…</code>
+                No factory configured for this chain — switch to <strong className="text-white">Celo
+                Mainnet</strong> to authorize an agent.
               </p>
             )}
           </Card>
@@ -72,6 +64,10 @@ function ConsoleBody() {
             </Card>
           )}
         </>
+      ) : (
+        <p className="text-white/45 text-sm leading-relaxed">
+          Connect your wallet (top-right) to authorize an agent and set its on-chain policy.
+        </p>
       )}
     </div>
   );
@@ -84,43 +80,46 @@ export function Console() {
         {/* faint watermark mark */}
         <KaneMark className="pointer-events-none absolute -right-24 -bottom-24 w-[520px] h-[520px] opacity-[0.04]" />
 
-        {/* nav */}
-        <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 pt-6 md:pt-8">
-          <Link to="/" className="flex items-center gap-3">
-            <KaneMark className="w-11 h-11 md:w-12 md:h-12" />
-            <span className="text-white text-[10px] md:text-xs tracking-[0.4em] font-light">
-              K A N E A I
-            </span>
-          </Link>
-          <a
-            href={DOCS_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="hidden md:block px-5 py-2.5 text-white text-sm hover:bg-white/10 btn-cut-border"
-          >
-            <span>How it works</span>
-          </a>
-        </nav>
+        <WagmiProvider config={wagmiConfig}>
+          <QueryClientProvider client={queryClient}>
+            {/* nav — wallet connect lives here, top-right */}
+            <nav className="relative z-10 flex items-center justify-between gap-4 px-6 md:px-10 pt-6 md:pt-8">
+              <Link to="/" className="flex items-center gap-3">
+                <KaneMark className="w-11 h-11 md:w-12 md:h-12" />
+                <span className="text-white text-[10px] md:text-xs tracking-[0.4em] font-light">
+                  K A N E A I
+                </span>
+              </Link>
+              <div className="flex items-center gap-3">
+                <a
+                  href={DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hidden md:block px-5 py-2.5 text-white text-sm hover:bg-white/10 btn-cut-border"
+                >
+                  <span>How it works</span>
+                </a>
+                <ConnectWallet />
+              </div>
+            </nav>
 
-        {/* content */}
-        <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto px-6 md:px-10 py-10 md:py-12 anim-fade">
-          <p className="text-white/50 text-xs tracking-[0.2em] uppercase mb-3">Console</p>
-          <h1 className="text-white text-3xl md:text-4xl font-normal leading-[1.1] tracking-[-0.03em]">
-            Authorize your agent.
-          </h1>
-          <p className="text-white/65 text-base leading-relaxed mt-4 max-w-2xl">
-            The model proposes; the on-chain policy gate decides. Set the limits here — the agent
-            works only inside them, and every position settles back to your wallet.
-          </p>
+            {/* content */}
+            <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto px-6 md:px-10 py-10 md:py-12 anim-fade">
+              <p className="text-white/50 text-xs tracking-[0.2em] uppercase mb-3">Console</p>
+              <h1 className="text-white text-3xl md:text-4xl font-normal leading-[1.1] tracking-[-0.03em]">
+                Authorize your agent.
+              </h1>
+              <p className="text-white/65 text-base leading-relaxed mt-4 max-w-2xl">
+                The model proposes; the on-chain policy gate decides. Set the limits here — the agent
+                works only inside them, and every position settles back to your wallet.
+              </p>
 
-          <div className="mt-8">
-            <WagmiProvider config={wagmiConfig}>
-              <QueryClientProvider client={queryClient}>
+              <div className="mt-8">
                 <ConsoleBody />
-              </QueryClientProvider>
-            </WagmiProvider>
-          </div>
-        </div>
+              </div>
+            </div>
+          </QueryClientProvider>
+        </WagmiProvider>
       </div>
     </div>
   );
