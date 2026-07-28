@@ -84,7 +84,7 @@ export function Console() {
           playsInline
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/85 to-black/90" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/75 to-black/80" />
 
         <WagmiProvider config={wagmiConfig}>
           <QueryClientProvider client={queryClient}>
