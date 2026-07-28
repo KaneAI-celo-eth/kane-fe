@@ -2,7 +2,7 @@ import { WagmiProvider, useChainId, useConnection } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { wagmiConfig } from "../config/wagmi";
-import { FACTORY } from "../config/contracts";
+import { FACTORY, explorerFor } from "../config/contracts";
 import { useExecutor } from "../hooks/useExecutor";
 import { ConnectWallet } from "../components/ConnectWallet";
 import { AuthorizeAgent } from "../components/AuthorizeAgent";
@@ -14,11 +14,24 @@ const queryClient = new QueryClient();
 
 function Card({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
   return (
-    <section className="border border-white/15 btn-cut-sm p-5 md:p-6 bg-black/40 backdrop-blur-md h-full min-h-screen">
+    <section className="border border-white/15 btn-cut-sm p-5 md:p-6 bg-black/40 backdrop-blur-md">
       <p className="text-white/45 text-xs tracking-[0.18em] uppercase mb-2">{label}</p>
       {desc && <p className="text-white/55 text-sm leading-relaxed mb-4 max-w-xl">{desc}</p>}
       {children}
     </section>
+  );
+}
+
+/** Page heading — same visual weight in every state so switching doesn't feel jarring. */
+function Heading({ title, desc }: { title: string; desc: string }) {
+  return (
+    <>
+      <p className="text-white/50 text-xs tracking-[0.2em] uppercase mb-3">Console</p>
+      <h1 className="text-white text-3xl md:text-4xl font-normal leading-[1.1] tracking-[-0.03em]">
+        {title}
+      </h1>
+      <p className="text-white/65 text-base leading-relaxed mt-4 max-w-2xl">{desc}</p>
+    </>
   );
 }
 
@@ -28,45 +41,92 @@ function ConsoleBody() {
   const factory = FACTORY[chainId];
   const { executor } = useExecutor(factory, address);
 
-  return (
-    <div className="flex flex-col gap-4">
-      <Card
-        label="Agent · the model advises"
-        desc="Tell the agent what you want in plain language. It proposes one concrete move — never an address — then the on-chain policy gate decides whether it runs."
-      >
-        <AgentPanel executor={executor} />
-      </Card>
+  // 1) Not connected → a focused connect prompt.
+  if (!isConnected) {
+    return (
+      <div className="anim-fade">
+        <Heading
+          title="Connect to start."
+          desc="Connect your wallet (top-right) to deploy your personal agent and set its on-chain policy."
+        />
+      </div>
+    );
+  }
 
-      {isConnected ? (
-        <>
+  // 2) Wrong chain (no factory) → a clear switch prompt.
+  if (!factory) {
+    return (
+      <div className="anim-fade">
+        <Heading
+          title="Switch network."
+          desc="No factory is configured for this chain."
+        />
+        <p className="text-white/55 text-sm leading-relaxed mt-6 max-w-xl">
+          Switch to <strong className="text-white">Celo Mainnet</strong> to authorize an agent.
+        </p>
+      </div>
+    );
+  }
+
+  // 3) Connected, no executor → ONBOARDING: register only (no chat), a single focused card.
+  if (!executor) {
+    return (
+      <div className="anim-fade">
+        <Heading
+          title="Authorize your agent."
+          desc="One signature deploys your personal executor and sets its policy. After that you can talk to it in plain language — and the on-chain gate decides every move."
+        />
+        <div className="mt-8 max-w-2xl">
           <Card
             label="Authorize agent"
-            desc="Deploy your personal executor and hand the agent a bounded mandate: spending caps, an allowlist of venues (Aave V3), and output locked to your address. Nothing here grants custody — revoke anytime."
+            desc="Deploy your executor and hand the agent a bounded mandate: spending caps, an allowlist of venues (Aave V3), and output locked to your address. Nothing here grants custody — revoke anytime."
           >
-            {factory ? (
-              <AuthorizeAgent factory={factory} />
-            ) : (
-              <p className="text-white/55 text-sm leading-relaxed">
-                No factory configured for this chain — switch to <strong className="text-white">Celo
-                Mainnet</strong> to authorize an agent.
-              </p>
-            )}
+            <AuthorizeAgent factory={factory} />
           </Card>
+        </div>
+      </div>
+    );
+  }
 
-          {executor && address && (
-            <Card
-              label="Policy"
-              desc="The guardrails currently enforced on-chain. The agent physically cannot exceed these — the contract reverts anything outside them."
-            >
-              <PolicyCard executor={executor} owner={address} />
-            </Card>
-          )}
-        </>
-      ) : (
-        <p className="text-white/45 text-sm leading-relaxed">
-          Connect your wallet (top-right) to authorize an agent and set its on-chain policy.
-        </p>
-      )}
+  // 4) Registered → the chat is the hero, above an executor-info bar + the live policy.
+  return (
+    <div className="anim-fade">
+      <Heading
+        title="Talk to your agent."
+        desc="Tell it what you want in plain language. It proposes one concrete move — never an address — and the on-chain policy gate decides whether it runs."
+      />
+
+      <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 border border-white/12 btn-cut-sm px-4 py-3 bg-black/40 backdrop-blur-md">
+        <span className="text-white/40 text-[11px] tracking-[0.18em] uppercase">Your executor</span>
+        <a
+          href={`${explorerFor(chainId)}/address/${executor}`}
+          target="_blank"
+          rel="noreferrer"
+          className="font-mono text-white/80 text-sm underline underline-offset-4 hover:text-white break-all"
+        >
+          {executor}
+        </a>
+        <span className="text-white/25">·</span>
+        <span className="text-white/45 text-xs">delegating to KaneAI's central agent, within your policy</span>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-4">
+        <Card
+          label="Agent · the model advises"
+          desc="Ask anything about Celo, or tell it to move funds. Every proposal is dry-run against your on-chain policy before it can execute."
+        >
+          <AgentPanel executor={executor} />
+        </Card>
+
+        {address && (
+          <Card
+            label="Policy"
+            desc="The guardrails currently enforced on-chain. The agent physically cannot exceed these — the contract reverts anything outside them."
+          >
+            <PolicyCard executor={executor} owner={address} />
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
@@ -75,7 +135,7 @@ export function Console() {
   return (
     <div className="min-h-screen w-full bg-black p-3 md:p-4 font-inter">
       <div className="w-full min-h-[calc(100vh-1.5rem)] md:min-h-[calc(100vh-2rem)] rounded-2xl relative overflow-hidden bg-black flex flex-col">
-        {/* same brand-built loop as the landing, dimmed hard so the dense console stays readable */}
+        {/* same brand-built loop as the landing, dimmed so the console stays readable */}
         <video
           src="/kane-bg.mp4"
           autoPlay
@@ -100,19 +160,8 @@ export function Console() {
             </nav>
 
             {/* content */}
-            <div className="relative z-10 flex-1 w-full mx-auto px-6 md:px-32 py-10 md:py-12 anim-fade">
-              <p className="text-white/50 text-xs tracking-[0.2em] uppercase mb-3">Console</p>
-              <h1 className="text-white text-3xl md:text-4xl font-normal leading-[1.1] tracking-[-0.03em]">
-                Authorize your agent.
-              </h1>
-              <p className="text-white/65 text-base leading-relaxed mt-4 max-w-2xl">
-                The model proposes; the on-chain policy gate decides. Set the limits here — the agent
-                works only inside them, and every position settles back to your wallet.
-              </p>
-
-              <div className="mt-8">
-                <ConsoleBody />
-              </div>
+            <div className="relative z-10 flex-1 w-full mx-auto px-6 md:px-32 py-10 md:py-12">
+              <ConsoleBody />
             </div>
           </QueryClientProvider>
         </WagmiProvider>
