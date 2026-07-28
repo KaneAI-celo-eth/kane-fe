@@ -1,7 +1,11 @@
 import { ArrowRight } from "lucide-react";
 
-const VIDEO_SRC =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260717_120352_eb988725-1351-43b3-8095-16e4a1005e3d.mp4";
+// Self-hosted, brand-built background loop (see remotion/ — 1920×1080, 10s, seamless).
+const VIDEO_SRC = "/kane-bg.mp4";
+
+// Placeholder public destinations until a hosted console/docs site exists.
+const GITHUB_ORG = "https://github.com/KaneAI-celo-eth";
+const DOCS_URL = "https://github.com/KaneAI-celo-eth/source-of-truth";
 
 /**
  * Four quarter-circle blades rotated around the center, each carved by a
@@ -56,12 +60,22 @@ export function App() {
             className="anim-stagger flex items-center gap-3"
             style={{ animationDelay: "0.2s" }}
           >
-            <button className="hidden md:block px-5 py-2.5 text-white text-sm hover:bg-white/10 btn-cut-border">
+            <a
+              href={DOCS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="hidden md:block px-5 py-2.5 text-white text-sm hover:bg-white/10 btn-cut-border"
+            >
               <span>How it works</span>
-            </button>
-            <button className="hidden md:block px-5 py-2.5 bg-white text-black text-sm hover:bg-white/90 btn-cut">
+            </a>
+            <a
+              href={GITHUB_ORG}
+              target="_blank"
+              rel="noreferrer"
+              className="hidden md:block px-5 py-2.5 bg-white text-black text-sm hover:bg-white/90 btn-cut"
+            >
               Launch Console
-            </button>
+            </a>
           </div>
         </nav>
 
@@ -134,10 +148,15 @@ export function App() {
               <span className="text-white text-2xl md:text-3xl font-medium">
                 Bounded by code
               </span>
-              <button className="w-full max-w-[280px] py-3.5 bg-white flex items-center justify-center gap-2 text-black hover:bg-white/90 transition-colors group btn-cut">
+              <a
+                href={GITHUB_ORG}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full max-w-[280px] py-3.5 bg-white flex items-center justify-center gap-2 text-black hover:bg-white/90 transition-colors group btn-cut"
+              >
                 <span className="text-sm font-medium">Get started</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
+              </a>
             </div>
 
             <div
