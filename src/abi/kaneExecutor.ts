@@ -18,7 +18,7 @@ export const kaneExecutorAbi = parseAbi([
   "function tokenPolicy(address token) view returns ((uint128 perTxCap, uint128 budget, uint128 spent, uint128 windowCap, uint128 windowSpent, uint64 windowDuration, uint64 windowStart) policy)",
   "function wouldAllowPull(address token, uint256 amount) view returns (bool ok, string reason)",
   // ---- owner-signed (MANAGER_ROLE) authorize/config writes ----
-  "function setAgent(address agent)",
+  // NB: no per-user setAgent — the agent is central (read live from the factory via agent()).
   "function provisionToken(address token, uint128 perTxCap, uint128 budget, uint128 windowCap, uint64 windowDuration)",
   "function setAllowedTarget(address target, bool allowed)",
   "function setAllowedSelector(address target, bytes4 selector, bool allowed, bool bindRecipient, uint16 recipientWordIndex)",

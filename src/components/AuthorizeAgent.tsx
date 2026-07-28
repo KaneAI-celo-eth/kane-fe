@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useChainId, useConnection, useReadContract, useWriteContract } from "wagmi";
-import { encodeFunctionData, isAddress, type Address, type Hex } from "viem";
+import { encodeFunctionData, type Address, type Hex } from "viem";
 import { kaneExecutorAbi } from "../abi/kaneExecutor";
 import {
   aaveDataProviderAbi,
@@ -27,7 +27,7 @@ const DONE = STEP_LABELS.length;
 
 const STEP_HELP = [
   "Deploys your own KaneExecutor — a single-owner contract that only ever holds your allowances.",
-  "ONE transaction sets the entire policy (batched via the executor's Multicall): names KaneAI's agent, sets USDC + aUSDC caps, allowlists the Aave V3 pool, permits supply & withdraw with the payout hard-bound to your address, and blocks raw token-move selectors. (Token allowances are granted later, when you first move funds.)",
+  "ONE transaction sets your entire policy (batched via the executor's Multicall): USDC + aUSDC caps, allowlists the Aave V3 pool, permits supply & withdraw with the payout hard-bound to your address, and blocks raw token-move selectors. The agent itself is KaneAI's central one (set on the factory, read live) — you don't set a key. (Token allowances are granted later, when you first move funds.)",
 ];
 
 export function AuthorizeAgent({ factory }: { factory: Address }) {
@@ -41,19 +41,14 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
     useWriteContract();
 
   const [step, setStep] = useState(0);
-  const [agentAddr, setAgentAddr] = useState("");
-  // KaneAI provides the agent: fetch our dedicated signer from the backend and pre-fill it,
-  // so the user authorizes it in one click instead of pasting an address they can't know.
+  // The agent is central (set on the factory); we fetch it only to SHOW which key the executor
+  // will delegate to — the user never sets or types it.
   const [kaneAgent, setKaneAgent] = useState<Address | null>(null);
-  const [override, setOverride] = useState(false);
 
   useEffect(() => {
     let live = true;
     void fetchAgentAddress().then((a) => {
-      if (live && a) {
-        setKaneAgent(a);
-        setAgentAddr((cur) => cur || a);
-      }
+      if (live && a) setKaneAgent(a);
     });
     return () => {
       live = false;
@@ -88,17 +83,16 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
   }
 
   const aavePool = aave.pool;
-  const agentValid = isAddress(agentAddr);
   const isCreateStep = step === 0;
   const currentHash = isCreateStep ? create.hash : execHash;
   const currentPending = isCreateStep ? create.isPending : execPending;
   const currentError = isCreateStep ? create.error : execError;
 
-  /** Step 2 — the entire policy in a single tx via the executor's Multicall. */
+  /** Step 2 — the entire policy in a single tx via the executor's Multicall. The agent is NOT set
+   *  here: it's central (KaneAI sets it once on the factory; every executor reads it live). */
   function authorizeMulticall() {
-    if (!executor || !agentValid || !aUsdc) return;
+    if (!executor || !aUsdc) return;
     const calls: Hex[] = [
-      encodeFunctionData({ abi: kaneExecutorAbi, functionName: "setAgent", args: [agentAddr as Address] }),
       encodeFunctionData({
         abi: kaneExecutorAbi,
         functionName: "provisionToken",
@@ -156,7 +150,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
   // Each step needs its precondition met before the owner can sign it.
   const canRun =
     !currentPending &&
-    (step === 0 ? true : Boolean(executor && agentValid && aUsdc));
+    (step === 0 ? true : Boolean(executor && aUsdc));
 
   return (
     <div className="flex flex-col gap-4">
@@ -207,54 +201,18 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
 
       {step < DONE && <p className="text-white/55 text-sm leading-relaxed">{STEP_HELP[step]}</p>}
 
-      {step === 1 &&
-        (kaneAgent && !override ? (
-          <div className="flex flex-col gap-2">
-            <span className="text-white/55 text-sm">
-              Signing this authorizes <strong className="text-white">KaneAI's agent</strong> — the
-              dedicated key our runtime signs with. A bounded mandate, never custody.
-            </span>
-            <div className="border border-white/15 px-3 py-2.5 btn-cut-sm">
-              <span className="font-mono text-white text-sm break-all">{kaneAgent}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOverride(true)}
-              className="self-start text-white/40 text-xs hover:text-white/70 transition-colors"
-            >
-              Advanced: use a different agent address
-            </button>
+      {step === 1 && kaneAgent && (
+        <div className="flex flex-col gap-2">
+          <span className="text-white/55 text-sm">
+            Your executor delegates to <strong className="text-white">KaneAI's agent</strong> — set
+            centrally on the factory and read live by every executor, so you never manage a key. A
+            bounded mandate, never custody.
+          </span>
+          <div className="border border-white/15 px-3 py-2.5 btn-cut-sm">
+            <span className="font-mono text-white text-sm break-all">{kaneAgent}</span>
           </div>
-        ) : (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-white/55 text-sm">
-              Agent address — the delegated key KaneAI signs with (never your own wallet)
-            </span>
-            <input
-              className="w-full bg-transparent border border-white/15 px-3 py-2.5 text-white text-sm placeholder:text-white/30 font-mono btn-cut-sm outline-none focus:border-white/40"
-              placeholder="0x…"
-              value={agentAddr}
-              onChange={(e) => setAgentAddr(e.target.value.trim())}
-            />
-            {agentAddr && !agentValid && (
-              <span className="text-sm" style={{ color: "#f87171" }}>
-                Not a valid address.
-              </span>
-            )}
-            {kaneAgent && (
-              <button
-                type="button"
-                onClick={() => {
-                  setOverride(false);
-                  setAgentAddr(kaneAgent);
-                }}
-                className="self-start text-white/40 text-xs hover:text-white/70 transition-colors"
-              >
-                Use KaneAI's agent instead
-              </button>
-            )}
-          </label>
-        ))}
+        </div>
+      )}
 
       {step === 1 && !aUsdc && (
         <p className="text-white/45 text-sm">Resolving aUSDC from Aave's data provider…</p>
