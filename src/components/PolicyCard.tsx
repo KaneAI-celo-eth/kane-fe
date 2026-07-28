@@ -40,16 +40,22 @@ export function PolicyCard({ executor, owner }: { executor: Address; owner: Addr
   const agentSet = Boolean(agent && agent !== ZERO);
 
   return (
-    <dl className="grid">
-      <Row k="Owner (MANAGER)" v={isManager ? "yes" : "no"} />
-      <Row k="Agent" v={agentSet ? (agent as string) : "not set"} mono={agentSet} />
-      <Row k="Version" v={version !== undefined ? String(version) : "—"} />
-      <Row k="Revoked" v={revoked ? "yes" : "no"} />
-      <Row k="USDC per-tx cap" v={usdc(policy.perTxCap)} />
-      <Row k="USDC budget" v={usdc(policy.budget)} />
-      <Row k="USDC spent" v={usdc(policy.spent)} />
-      <Row k="USDC window cap" v={policy.windowCap === 0n ? "off" : usdc(policy.windowCap)} />
-    </dl>
+    <div className="stack">
+      <dl className="grid">
+        <Row k="Owner (MANAGER)" v={isManager ? "yes" : "no"} />
+        <Row k="Agent" v={agentSet ? (agent as string) : "not set"} mono={agentSet} />
+        <Row k="Version" v={version !== undefined ? String(version) : "—"} />
+        <Row k="Revoked" v={revoked ? "yes" : "no"} />
+        <Row k="USDC per-tx cap" v={usdc(policy.perTxCap)} />
+        <Row k="USDC budget" v={usdc(policy.budget)} />
+        <Row k="USDC spent" v={usdc(policy.spent)} />
+        <Row k="USDC window cap" v={policy.windowCap === 0n ? "off" : usdc(policy.windowCap)} />
+      </dl>
+      <p className="hint">
+        <strong>Revoked</strong> is your kill-switch — flip it and the agent is frozen instantly,
+        whatever it proposes. Caps are per-token and enforced by the contract, not the model.
+      </p>
+    </div>
   );
 }
 

@@ -30,6 +30,7 @@ body {
 }
 
 .brand { font-size: 1.25rem; font-weight: 700; }
+.tagline { color: var(--accent); font-style: italic; }
 
 .wrap {
   max-width: 720px;
@@ -47,6 +48,13 @@ body {
   padding: 1.25rem;
 }
 .card h2 { margin: 0 0 0.75rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.card.hero { border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+
+.lead { margin: 0; font-size: 1.02rem; line-height: 1.6; }
+.lead strong { color: var(--accent); }
+.desc { margin: -0.35rem 0 1rem; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+.hint { margin: 0.4rem 0 0; color: var(--muted); font-size: 0.85rem; line-height: 1.5; }
+.kicker { margin: 0 0 0.5rem; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); }
 
 .btn {
   background: var(--accent);

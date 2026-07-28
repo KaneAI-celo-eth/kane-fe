@@ -33,6 +33,20 @@ const STEP_LABELS = [
 ];
 const DONE = STEP_LABELS.length;
 
+// One plain-language line per step — what you're actually signing and why it's safe.
+const STEP_HELP = [
+  "Deploys your own KaneExecutor — a single-owner contract that only ever holds your allowances.",
+  "Names the delegated key the agent signs with. It can propose moves, but only within the limits below.",
+  "Sets how much USDC the agent may move: per-transaction cap, total budget, and an optional time window.",
+  "Same caps for the Aave interest token (aUSDC), so withdrawals stay bounded too.",
+  "Whitelists the Aave V3 pool as the one venue the agent may call. Everything else stays blocked.",
+  "Permits supply — with the deposit hard-bound to your address, so yield accrues to you, never the agent.",
+  "Permits withdraw — with the payout hard-bound to your address. The agent can't redirect funds out.",
+  "Blocks raw transfer / approve / permit selectors, so an allowlisted call can never smuggle a token move.",
+  "Grants the executor an allowance to pull USDC on your behalf. It pulls only within the caps above.",
+  "Grants the same allowance for aUSDC, so the agent can unwind an Aave position back to you.",
+];
+
 export function AuthorizeAgent({ factory }: { factory: Address }) {
   const { address: owner } = useConnection();
   const chainId = useChainId();
@@ -222,9 +236,11 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
         </p>
       )}
 
+      {step < DONE && <p className="hint">{STEP_HELP[step]}</p>}
+
       {step === 1 && (
         <label className="field">
-          <span>Agent address (the delegated key kane-be signs with)</span>
+          <span>Agent address — the delegated key KaneAI signs with (never your own wallet)</span>
           <input
             className="input mono"
             placeholder="0x…"
@@ -251,7 +267,10 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
           )}
         </div>
       ) : (
-        <p className="ok">Agent authorized ✓ — kane-be can now drive the executor.</p>
+        <p className="ok">
+          Agent authorized ✓ — KaneAI can now rebalance within your policy. Funds stay yours; revoke
+          anytime from the Policy card.
+        </p>
       )}
 
       {currentHash && (

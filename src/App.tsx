@@ -17,8 +17,23 @@ function Console() {
 
   return (
     <div className="stack">
+      <section className="card hero">
+        <p className="kicker">Autonomous stablecoin agent · Celo</p>
+        <p className="lead">
+          <strong>KaneAI</strong> puts an AI agent to work on your stablecoins — earning yield,
+          rebalancing, paying per call — without ever taking custody. The model proposes each
+          move; a deterministic on-chain policy gate written in Solidity decides whether it runs.
+          The agent can only touch what you allow, only where you allow, and every position
+          settles straight back to your wallet.
+        </p>
+      </section>
+
       <section className="card">
         <h2>Wallet</h2>
+        <p className="desc">
+          Connect the wallet that owns the funds. This is the only key that can set policy — the
+          agent never holds it.
+        </p>
         <ConnectWallet />
       </section>
 
@@ -26,6 +41,11 @@ function Console() {
         <>
           <section className="card">
             <h2>Authorize Agent</h2>
+            <p className="desc">
+              Deploy your personal executor and hand the agent a bounded mandate: spending caps,
+              an allowlist of venues (here, Aave V3), and output locked to your address. Nothing
+              in these steps grants custody — and you can revoke the mandate at any time.
+            </p>
             {factory ? (
               <AuthorizeAgent factory={factory} />
             ) : (
@@ -39,6 +59,10 @@ function Console() {
           {executor && address && (
             <section className="card">
               <h2>Policy</h2>
+              <p className="desc">
+                The guardrails currently enforced on-chain. The agent physically cannot exceed
+                these — the contract reverts anything outside them.
+              </p>
               <PolicyCard executor={executor} owner={address} />
             </section>
           )}
@@ -56,7 +80,7 @@ export function App() {
           <div className="brand">
             KaneAI <span className="muted">Console</span>
           </div>
-          <div className="muted small">The model advises; the chain decides.</div>
+          <div className="tagline small">The model advises; the chain decides.</div>
         </header>
         <main className="wrap">
           <Console />
