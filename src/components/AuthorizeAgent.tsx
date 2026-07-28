@@ -10,6 +10,7 @@ import {
 import { AAVE, USDC_CELO, explorerFor } from "../config/contracts";
 import { attributionSuffix } from "../config/attribution";
 import { standardForbiddenSelectors } from "../config/forbiddenSelectors";
+import { fetchAgentAddress } from "../config/agent";
 import { useCreateExecutor } from "../hooks/useCreateExecutor";
 import { useExecutor } from "../hooks/useExecutor";
 
@@ -59,6 +60,23 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
 
   const [step, setStep] = useState(0);
   const [agentAddr, setAgentAddr] = useState("");
+  // KaneAI provides the agent: fetch our dedicated signer from the backend and pre-fill it,
+  // so the user authorizes it in one click instead of pasting an address they can't know.
+  const [kaneAgent, setKaneAgent] = useState<Address | null>(null);
+  const [override, setOverride] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    void fetchAgentAddress().then((a) => {
+      if (live && a) {
+        setKaneAgent(a);
+        setAgentAddr((cur) => cur || a);
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   // aUSDC (aToken) is resolved on-chain from Aave's ProtocolDataProvider — never hardcoded.
   const { data: reserveTokens } = useReadContract({
@@ -260,24 +278,54 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
 
       {step < DONE && <p className="text-white/55 text-sm leading-relaxed">{STEP_HELP[step]}</p>}
 
-      {step === 1 && (
-        <label className="flex flex-col gap-1.5">
-          <span className="text-white/55 text-sm">
-            Agent address — the delegated key KaneAI signs with (never your own wallet)
-          </span>
-          <input
-            className="w-full bg-transparent border border-white/15 px-3 py-2.5 text-white text-sm placeholder:text-white/30 font-mono btn-cut-sm outline-none focus:border-white/40"
-            placeholder="0x…"
-            value={agentAddr}
-            onChange={(e) => setAgentAddr(e.target.value.trim())}
-          />
-          {agentAddr && !agentValid && (
-            <span className="text-sm" style={{ color: "#f87171" }}>
-              Not a valid address.
+      {step === 1 &&
+        (kaneAgent && !override ? (
+          <div className="flex flex-col gap-2">
+            <span className="text-white/55 text-sm">
+              This is <strong className="text-white">KaneAI's agent</strong> — the dedicated key our
+              runtime signs with. You're granting it a bounded mandate, never custody.
             </span>
-          )}
-        </label>
-      )}
+            <div className="border border-white/15 px-3 py-2.5 btn-cut-sm">
+              <span className="font-mono text-white text-sm break-all">{kaneAgent}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOverride(true)}
+              className="self-start text-white/40 text-xs hover:text-white/70 transition-colors"
+            >
+              Advanced: use a different agent address
+            </button>
+          </div>
+        ) : (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-white/55 text-sm">
+              Agent address — the delegated key KaneAI signs with (never your own wallet)
+            </span>
+            <input
+              className="w-full bg-transparent border border-white/15 px-3 py-2.5 text-white text-sm placeholder:text-white/30 font-mono btn-cut-sm outline-none focus:border-white/40"
+              placeholder="0x…"
+              value={agentAddr}
+              onChange={(e) => setAgentAddr(e.target.value.trim())}
+            />
+            {agentAddr && !agentValid && (
+              <span className="text-sm" style={{ color: "#f87171" }}>
+                Not a valid address.
+              </span>
+            )}
+            {kaneAgent && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOverride(false);
+                  setAgentAddr(kaneAgent);
+                }}
+                className="self-start text-white/40 text-xs hover:text-white/70 transition-colors"
+              >
+                Use KaneAI's agent instead
+              </button>
+            )}
+          </label>
+        ))}
 
       {(step === 3 || step === 9) && !aUsdc && (
         <p className="text-white/45 text-sm">Resolving aUSDC from Aave's data provider…</p>

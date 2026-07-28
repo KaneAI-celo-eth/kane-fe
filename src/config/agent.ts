@@ -31,6 +31,20 @@ export type IntentResult = {
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
+/** GET /health → KaneAI's dedicated agent signer address (the key the runtime signs with),
+ *  or null if the backend has no key configured / is unreachable. The console authorizes THIS
+ *  address — the user never has to know or type it. */
+export async function fetchAgentAddress(): Promise<`0x${string}` | null> {
+  try {
+    const res = await fetch(`${AGENT_API}/health`);
+    if (!res.ok) return null;
+    const h = (await res.json()) as { agent?: string | null };
+    return h.agent && h.agent.startsWith("0x") ? (h.agent as `0x${string}`) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** POST /intent — the model proposes a concrete action (and dry-runs it when an executor exists).
  *  `history` carries prior turns for a multi-turn chat. */
 export async function proposeIntent(

@@ -141,7 +141,7 @@ export function AgentPanel() {
         </button>
 
         {!empty && (
-          <div ref={scrollRef} className="flex flex-col gap-4 max-h-[26rem] overflow-y-auto pr-1">
+          <div ref={scrollRef} className="flex flex-col gap-4 h-[calc(100vh-22rem)] max-h-[46rem] min-h-[20rem] overflow-y-auto pr-1">
             {messages.map((m, i) =>
               m.role === "user" ? (
                 <div
