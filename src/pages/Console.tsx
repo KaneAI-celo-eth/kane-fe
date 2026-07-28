@@ -12,11 +12,9 @@ import { KaneMark } from "../components/KaneMark";
 
 const queryClient = new QueryClient();
 
-const DOCS_URL = "https://github.com/KaneAI-celo-eth/.github";
-
 function Card({ label, desc, children }: { label: string; desc?: string; children: React.ReactNode }) {
   return (
-    <section className="border border-white/15 btn-cut-sm p-5 md:p-6">
+    <section className="border border-white/15 btn-cut-sm p-5 md:p-6 bg-black/40 backdrop-blur-md">
       <p className="text-white/45 text-xs tracking-[0.18em] uppercase mb-2">{label}</p>
       {desc && <p className="text-white/55 text-sm leading-relaxed mb-4 max-w-xl">{desc}</p>}
       {children}
@@ -77,8 +75,16 @@ export function Console() {
   return (
     <div className="min-h-screen w-full bg-black p-3 md:p-4 font-inter">
       <div className="w-full min-h-[calc(100vh-1.5rem)] md:min-h-[calc(100vh-2rem)] rounded-2xl relative overflow-hidden bg-black flex flex-col">
-        {/* faint watermark mark */}
-        <KaneMark className="pointer-events-none absolute -right-24 -bottom-24 w-[520px] h-[520px] opacity-[0.04]" />
+        {/* same brand-built loop as the landing, dimmed hard so the dense console stays readable */}
+        <video
+          src="/kane-bg.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/85 to-black/90" />
 
         <WagmiProvider config={wagmiConfig}>
           <QueryClientProvider client={queryClient}>
@@ -90,17 +96,7 @@ export function Console() {
                   K A N E A I
                 </span>
               </Link>
-              <div className="flex items-center gap-3">
-                <a
-                  href={DOCS_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hidden md:block px-5 py-2.5 text-white text-sm hover:bg-white/10 btn-cut-border"
-                >
-                  <span>How it works</span>
-                </a>
-                <ConnectWallet />
-              </div>
+              <ConnectWallet />
             </nav>
 
             {/* content */}
