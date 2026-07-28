@@ -4,7 +4,7 @@ import { AGENT_API, proposeIntent, type IntentResult } from "../config/agent";
 
 const PRESETS = [
   "I have 500 USDC sitting idle — put it to work earning yield.",
-  "Swap 100 cUSD to cEUR.",
+  "Swap 100 USDm to EURm.",
   "What's the best USDC yield on Celo right now?",
   "Markets look risky — pull 100 USDC back to my wallet.",
 ];
@@ -138,9 +138,9 @@ function Proposal({ result }: { result: IntentResult }) {
           {q ? (
             <>
               <p className="text-white text-xl md:text-2xl font-normal tracking-[-0.01em]">
-                Swap {a.amount} {a.from}{" "}
+                Swap {a.amount} {q.from}{" "}
                 <span className="text-white/45 text-base">
-                  → ≈ {Number(q.amountOutHuman).toLocaleString(undefined, { maximumFractionDigits: 6 })} {a.to}
+                  → ≈ {Number(q.amountOutHuman).toLocaleString(undefined, { maximumFractionDigits: 6 })} {q.to}
                 </span>
               </p>
               <p className="text-white/35 text-xs font-mono mt-2 break-all">
@@ -167,7 +167,7 @@ function Proposal({ result }: { result: IntentResult }) {
               )
             ) : (
               <p className="text-white/55 text-sm leading-relaxed">
-                Authorize an agent (with {a.from} provisioned + Ubeswap allowlisted) to dry-run this against
+                Authorize an agent (with {q.from} provisioned + Ubeswap allowlisted) to dry-run this against
                 the gate. Output is <span className="text-white">bound to your wallet</span>; nothing executes
                 until the gate approves.
               </p>

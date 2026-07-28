@@ -43,7 +43,7 @@ export interface TokenInfo {
 export const TOKENS: Record<number, TokenInfo[]> = {
   [celo.id]: [
     { symbol: "USDC", address: USDC_CELO, decimals: 6 },
-    { symbol: "cUSD", address: "0x765DE816845861e75A25fCA122bb6898B8B1282a", decimals: 18 },
+    { symbol: "USDm", address: "0x765DE816845861e75A25fCA122bb6898B8B1282a", decimals: 18 },
   ],
   [celoSepolia.id]: [],
 };
