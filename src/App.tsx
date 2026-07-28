@@ -5,18 +5,19 @@ const VIDEO_SRC =
 
 /**
  * Four quarter-circle blades rotated around the center, each carved by a
- * concave arc — together they read as a vortex / four-point plus mark.
+ * concave arc — together they read as a four-point mark: the agent proposing
+ * from four sides, the chain deciding at the center.
  */
 const BLADE = "M128 128 L128 0 A128 128 0 0 0 256 128 Z";
 
-function VortxMark({ className }: { className?: string }) {
+function KaneMark({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 256 256"
       className={className}
       fill="white"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="VortxLab Creations"
+      aria-label="KaneAI"
       role="img"
     >
       <path d={BLADE} />
@@ -45,9 +46,9 @@ export function App() {
         {/* ------------------------------------------------------------ nav */}
         <nav className="relative z-10 flex items-center justify-between px-6 md:px-10 pt-6 md:pt-8">
           <div className="anim-stagger" style={{ animationDelay: "0.1s" }}>
-            <VortxMark className="w-14 h-14 md:w-16 md:h-16" />
+            <KaneMark className="w-14 h-14 md:w-16 md:h-16" />
             <span className="block text-white text-[10px] md:text-xs tracking-[0.4em] mt-1 font-light">
-              V O R T X
+              K A N E A I
             </span>
           </div>
 
@@ -56,10 +57,10 @@ export function App() {
             style={{ animationDelay: "0.2s" }}
           >
             <button className="hidden md:block px-5 py-2.5 text-white text-sm hover:bg-white/10 btn-cut-border">
-              <span>Neural Synergy</span>
+              <span>How it works</span>
             </button>
             <button className="hidden md:block px-5 py-2.5 bg-white text-black text-sm hover:bg-white/90 btn-cut">
-              Cyber Synthesis
+              Launch Console
             </button>
           </div>
         </nav>
@@ -73,11 +74,11 @@ export function App() {
               style={{ animationDelay: "0.4s" }}
             >
               <p className="text-white/80 text-base leading-relaxed max-w-[220px]">
-                Come with us
+                Autonomous
                 <br />
-                exploring the
+                stablecoin agent
                 <br />
-                horizon
+                on Celo
               </p>
 
               <div className="flex flex-col gap-2 mt-4">
@@ -87,9 +88,9 @@ export function App() {
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-white/70 text-xs">
-                    Perpetual
+                    Non-custodial
                     <br />
-                    Immersion
+                    by design
                   </span>
                   <span className="text-white/50 text-xs">01</span>
                 </div>
@@ -105,11 +106,11 @@ export function App() {
                 className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-normal leading-[1.1] tracking-[-0.04em]"
                 style={{ textShadow: "0 2px 12px rgba(0,0,0,0.25)" }}
               >
-                Forging Tomorrow
+                The Model Advises
                 <br />
-                Virtual Horizon
+                The Chain Decides
                 <br />
-                VortxLab Creations
+                KaneAI on Celo
               </h1>
             </div>
           </div>
@@ -121,8 +122,8 @@ export function App() {
               style={{ animationDelay: "0.7s" }}
             >
               <p className="text-white text-sm leading-relaxed max-w-[260px] text-center md:text-left md:ml-auto">
-                We push past conventions, reshaping the virtual terrain with
-                next-level technologies.
+                An AI agent proposes each move; a deterministic on-chain policy
+                gate decides whether it runs. Your funds never leave your wallet.
               </p>
             </div>
 
@@ -131,10 +132,10 @@ export function App() {
               style={{ animationDelay: "0.85s" }}
             >
               <span className="text-white text-2xl md:text-3xl font-medium">
-                Net Dynamics
+                Bounded by code
               </span>
               <button className="w-full max-w-[280px] py-3.5 bg-white flex items-center justify-center gap-2 text-black hover:bg-white/90 transition-colors group btn-cut">
-                <span className="text-sm font-medium">Discover Now</span>
+                <span className="text-sm font-medium">Get started</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
