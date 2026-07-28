@@ -3,10 +3,10 @@ import { celo, celoSepolia } from "./chains";
 
 /**
  * KaneExecutorFactory address per chain. The mainnet factory is the canonical deployed
- * singleton (Celo mainnet, 2026-07-28, verified on Celoscan) — baked in like USDC/Aave below;
- * `VITE_FACTORY_*` still overrides it per build (e.g. an anvil fork).
+ * singleton — a UUPS proxy (Celo mainnet, 2026-07-28, verified on Celoscan) — baked in like
+ * USDC/Aave below; `VITE_FACTORY_*` still overrides it per build (e.g. an anvil fork).
  */
-const CELO_FACTORY = "0xB746Bf016Ac4E57c71E6736e1a4082b5baEeb791";
+const CELO_FACTORY = "0x1CB84F7597A97A6c6BEE5CcE3AF4E1fBF02E0981";
 export const FACTORY: Record<number, Address | undefined> = {
   [celo.id]: (import.meta.env.VITE_FACTORY_CELO as Address | undefined) || CELO_FACTORY,
   [celoSepolia.id]: (import.meta.env.VITE_FACTORY_SEPOLIA as Address | undefined) || undefined,
