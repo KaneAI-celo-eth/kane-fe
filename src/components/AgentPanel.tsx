@@ -97,6 +97,21 @@ export function AgentPanel() {
       )}
 
       {result && <Proposal result={result} />}
+
+      {result?.action.kind === "answer" && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-white/40 text-xs">Act on it:</span>
+          {["Supply 100 USDC", "Supply 500 USDC"].map((t) => (
+            <button
+              key={t}
+              onClick={() => run(t)}
+              className="text-xs text-white/70 border border-white/15 px-2.5 py-1.5 btn-cut-sm hover:text-white hover:border-white/30 transition-colors"
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
