@@ -132,7 +132,11 @@ function Proposal({ result }: { result: IntentResult }) {
   );
 }
 
+// The demo policy the authorize-agent stepper provisions (mirrors kane-sc's fork test).
+const DEMO_PER_TX_USDC = 1000;
+
 function ChainVerdict({ result }: { result: IntentResult }) {
+  // Real verdict: the on-chain gate dry-ran the pull (needs a deployed executor).
   if (result.dryRun) {
     const ok = result.dryRun.ok;
     return (
@@ -149,12 +153,29 @@ function ChainVerdict({ result }: { result: IntentResult }) {
     );
   }
 
+  // Pre-deploy: an honest client-side preview against the demo caps, clearly labelled.
+  const a = result.action;
+  const amt = a.kind === "noop" ? 0 : Number(a.amount) / 1e6;
+  const within = amt <= DEMO_PER_TX_USDC;
   return (
     <div className="border border-white/12 btn-cut-sm p-4">
-      <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-1.5">The chain decides</p>
-      <p className="text-white/55 text-sm leading-relaxed">
-        Authorize an agent (with a deployed policy) to dry-run this against the on-chain gate. The
-        proposal is <span className="text-white">never executed</span> until the gate approves it.
+      <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-1.5">
+        The chain decides <span className="text-white/25 normal-case tracking-normal">· preview</span>
+      </p>
+      {within ? (
+        <p className="text-white text-sm">
+          Within the demo policy ✓ — {amt} USDC ≤ {DEMO_PER_TX_USDC} USDC per-tx cap.
+        </p>
+      ) : (
+        <p className="text-sm" style={{ color: "#f87171" }}>
+          Exceeds the demo policy ✕ — {amt} USDC &gt; {DEMO_PER_TX_USDC} USDC per-tx cap → the gate
+          would revert.
+        </p>
+      )}
+      <p className="text-white/45 text-xs mt-2 leading-relaxed">
+        Client-side preview against the demo caps. Authorize an agent to run the{" "}
+        <span className="text-white/70">real on-chain gate</span> — the proposal is never executed
+        until it approves.
       </p>
     </div>
   );
