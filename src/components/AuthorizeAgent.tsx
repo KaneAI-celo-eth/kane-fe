@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useChainId, useConnection, useReadContract, useWriteContract } from "wagmi";
-import { encodeFunctionData, erc20Abi, isAddress, maxUint256, type Address, type Hex } from "viem";
+import { encodeFunctionData, isAddress, type Address, type Hex } from "viem";
 import { kaneExecutorAbi } from "../abi/kaneExecutor";
 import {
   aaveDataProviderAbi,
@@ -20,21 +20,14 @@ const BUDGET = 1_000_000_000n; // 1000e6
 const WINDOW_CAP = 0n;
 const WINDOW_DURATION = 0n;
 
-// The whole policy in one owner transaction (executor Multicall), then the two ERC-20 approvals
-// (owner → token — these can't live in the executor's self-multicall).
-const STEP_LABELS = [
-  "Create executor",
-  "Authorize agent — 1 signature",
-  "Approve USDC to executor",
-  "Approve aUSDC to executor",
-];
+// Registration is just create + one policy tx. The ERC-20 allowance the executor needs to pull
+// funds is granted just-in-time — at the moment a fund-moving action is actually signed — not here.
+const STEP_LABELS = ["Create executor", "Authorize agent — 1 signature"];
 const DONE = STEP_LABELS.length;
 
 const STEP_HELP = [
   "Deploys your own KaneExecutor — a single-owner contract that only ever holds your allowances.",
-  "ONE transaction sets the entire policy (batched via the executor's Multicall): names KaneAI's agent, sets USDC + aUSDC caps, allowlists the Aave V3 pool, permits supply & withdraw with the payout hard-bound to your address, and blocks raw token-move selectors.",
-  "Grants the executor an allowance to pull USDC on your behalf — only within the caps above.",
-  "Grants the same allowance for aUSDC, so the agent can unwind an Aave position back to you.",
+  "ONE transaction sets the entire policy (batched via the executor's Multicall): names KaneAI's agent, sets USDC + aUSDC caps, allowlists the Aave V3 pool, permits supply & withdraw with the payout hard-bound to your address, and blocks raw token-move selectors. (Token allowances are granted later, when you first move funds.)",
 ];
 
 export function AuthorizeAgent({ factory }: { factory: Address }) {
@@ -152,27 +145,6 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
       case 1:
         authorizeMulticall();
         return;
-      case 2:
-        // The executor pulls via transferFrom(owner) — the owner must approve it first.
-        if (!executor) return;
-        writeExecutor({
-          address: USDC_CELO,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [executor, maxUint256],
-          dataSuffix: attributionSuffix,
-        });
-        return;
-      case 3:
-        if (!executor || !aUsdc) return;
-        writeExecutor({
-          address: aUsdc,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [executor, maxUint256],
-          dataSuffix: attributionSuffix,
-        });
-        return;
     }
   }
 
@@ -184,13 +156,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
   // Each step needs its precondition met before the owner can sign it.
   const canRun =
     !currentPending &&
-    (step === 0
-      ? true
-      : step === 1
-        ? Boolean(executor && agentValid && aUsdc)
-        : step === 3
-          ? Boolean(executor && aUsdc)
-          : Boolean(executor));
+    (step === 0 ? true : Boolean(executor && agentValid && aUsdc));
 
   return (
     <div className="flex flex-col gap-4">
@@ -290,7 +256,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
           </label>
         ))}
 
-      {(step === 1 || step === 3) && !aUsdc && (
+      {step === 1 && !aUsdc && (
         <p className="text-white/45 text-sm">Resolving aUSDC from Aave's data provider…</p>
       )}
 
@@ -314,8 +280,9 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
         </div>
       ) : (
         <p className="text-white text-sm leading-relaxed">
-          Agent authorized ✓ — KaneAI can now rebalance within your policy. Funds stay yours; revoke
-          anytime from the Policy card.
+          Agent authorized ✓ — KaneAI can now propose moves within your policy. Funds stay yours; the
+          allowance to pull a token is granted the first time you move it, and you can revoke anytime
+          from the Policy card.
         </p>
       )}
 
