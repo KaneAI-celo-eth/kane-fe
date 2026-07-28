@@ -24,6 +24,8 @@ export const kaneExecutorAbi = parseAbi([
   "function setAllowedSelector(address target, bytes4 selector, bool allowed, bool bindRecipient, uint16 recipientWordIndex)",
   "function setForbiddenSelector(bytes4 selector, bool forbidden)",
   "function setForbiddenSelectors(bytes4[] selectors, bool forbidden)",
+  // ---- batch (OZ MulticallUpgradeable): all config in ONE owner tx; msg.sender preserved so onlyRole holds ----
+  "function multicall(bytes[] data) returns (bytes[] results)",
   // ---- agent-signed atomic action (driven by kane-be; declared for completeness) ----
   "function execute((address token, uint256 amount)[] pulls, (address token, address spender, uint256 amount)[] approvals, (address target, uint256 value, bytes data)[] calls, uint32 expectedVersion)",
 ]);

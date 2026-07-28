@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useChainId, useConnection, useReadContract, useWriteContract } from "wagmi";
-import { erc20Abi, isAddress, maxUint256, type Address } from "viem";
+import { encodeFunctionData, erc20Abi, isAddress, maxUint256, type Address, type Hex } from "viem";
 import { kaneExecutorAbi } from "../abi/kaneExecutor";
 import {
   aaveDataProviderAbi,
@@ -20,31 +20,20 @@ const BUDGET = 1_000_000_000n; // 1000e6
 const WINDOW_CAP = 0n;
 const WINDOW_DURATION = 0n;
 
+// The whole policy in one owner transaction (executor Multicall), then the two ERC-20 approvals
+// (owner → token — these can't live in the executor's self-multicall).
 const STEP_LABELS = [
   "Create executor",
-  "Set agent key",
-  "Provision USDC caps",
-  "Provision aUSDC caps",
-  "Allowlist Aave pool",
-  "Allow supply (recipient-bound)",
-  "Allow withdraw (recipient-bound)",
-  "Seed forbidden selectors",
+  "Authorize agent — 1 signature",
   "Approve USDC to executor",
   "Approve aUSDC to executor",
 ];
 const DONE = STEP_LABELS.length;
 
-// One plain-language line per step — what you're actually signing and why it's safe.
 const STEP_HELP = [
   "Deploys your own KaneExecutor — a single-owner contract that only ever holds your allowances.",
-  "Names the delegated key the agent signs with. It can propose moves, but only within the limits below.",
-  "Sets how much USDC the agent may move: per-transaction cap, total budget, and an optional time window.",
-  "Same caps for the Aave interest token (aUSDC), so withdrawals stay bounded too.",
-  "Whitelists the Aave V3 pool as the one venue the agent may call. Everything else stays blocked.",
-  "Permits supply — with the deposit hard-bound to your address, so yield accrues to you, never the agent.",
-  "Permits withdraw — with the payout hard-bound to your address. The agent can't redirect funds out.",
-  "Blocks raw transfer / approve / permit selectors, so an allowlisted call can never smuggle a token move.",
-  "Grants the executor an allowance to pull USDC on your behalf. It pulls only within the caps above.",
+  "ONE transaction sets the entire policy (batched via the executor's Multicall): names KaneAI's agent, sets USDC + aUSDC caps, allowlists the Aave V3 pool, permits supply & withdraw with the payout hard-bound to your address, and blocks raw token-move selectors.",
+  "Grants the executor an allowance to pull USDC on your behalf — only within the caps above.",
   "Grants the same allowance for aUSDC, so the agent can unwind an Aave position back to you.",
 ];
 
@@ -112,84 +101,58 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
   const currentPending = isCreateStep ? create.isPending : execPending;
   const currentError = isCreateStep ? create.error : execError;
 
+  /** Step 2 — the entire policy in a single tx via the executor's Multicall. */
+  function authorizeMulticall() {
+    if (!executor || !agentValid || !aUsdc) return;
+    const calls: Hex[] = [
+      encodeFunctionData({ abi: kaneExecutorAbi, functionName: "setAgent", args: [agentAddr as Address] }),
+      encodeFunctionData({
+        abi: kaneExecutorAbi,
+        functionName: "provisionToken",
+        args: [USDC_CELO, PER_TX_CAP, BUDGET, WINDOW_CAP, WINDOW_DURATION],
+      }),
+      encodeFunctionData({
+        abi: kaneExecutorAbi,
+        functionName: "provisionToken",
+        args: [aUsdc, PER_TX_CAP, BUDGET, WINDOW_CAP, WINDOW_DURATION],
+      }),
+      encodeFunctionData({ abi: kaneExecutorAbi, functionName: "setAllowedTarget", args: [aavePool, true] }),
+      // bindRecipient=true, recipientWordIndex=2 → Aave supply.onBehalfOf forced to the owner.
+      encodeFunctionData({
+        abi: kaneExecutorAbi,
+        functionName: "setAllowedSelector",
+        args: [aavePool, AAVE_SUPPLY_SELECTOR, true, true, 2],
+      }),
+      // bindRecipient=true, recipientWordIndex=2 → Aave withdraw.to forced to the owner.
+      encodeFunctionData({
+        abi: kaneExecutorAbi,
+        functionName: "setAllowedSelector",
+        args: [aavePool, AAVE_WITHDRAW_SELECTOR, true, true, 2],
+      }),
+      encodeFunctionData({
+        abi: kaneExecutorAbi,
+        functionName: "setForbiddenSelectors",
+        args: [standardForbiddenSelectors(), true],
+      }),
+    ];
+    writeExecutor({
+      address: executor,
+      abi: kaneExecutorAbi,
+      functionName: "multicall",
+      args: [calls],
+      dataSuffix: attributionSuffix,
+    });
+  }
+
   function runStep() {
     switch (step) {
       case 0:
         create.createExecutor(factory);
         return;
       case 1:
-        if (!executor || !agentValid) return;
-        writeExecutor({
-          address: executor,
-          abi: kaneExecutorAbi,
-          functionName: "setAgent",
-          args: [agentAddr as Address],
-          dataSuffix: attributionSuffix,
-        });
+        authorizeMulticall();
         return;
       case 2:
-        if (!executor) return;
-        writeExecutor({
-          address: executor,
-          abi: kaneExecutorAbi,
-          functionName: "provisionToken",
-          args: [USDC_CELO, PER_TX_CAP, BUDGET, WINDOW_CAP, WINDOW_DURATION],
-          dataSuffix: attributionSuffix,
-        });
-        return;
-      case 3:
-        if (!executor || !aUsdc) return;
-        writeExecutor({
-          address: executor,
-          abi: kaneExecutorAbi,
-          functionName: "provisionToken",
-          args: [aUsdc, PER_TX_CAP, BUDGET, WINDOW_CAP, WINDOW_DURATION],
-          dataSuffix: attributionSuffix,
-        });
-        return;
-      case 4:
-        if (!executor) return;
-        writeExecutor({
-          address: executor,
-          abi: kaneExecutorAbi,
-          functionName: "setAllowedTarget",
-          args: [aavePool, true],
-          dataSuffix: attributionSuffix,
-        });
-        return;
-      case 5:
-        if (!executor) return;
-        // bindRecipient=true, recipientWordIndex=2 → Aave supply.onBehalfOf is forced to the owner.
-        writeExecutor({
-          address: executor,
-          abi: kaneExecutorAbi,
-          functionName: "setAllowedSelector",
-          args: [aavePool, AAVE_SUPPLY_SELECTOR, true, true, 2],
-          dataSuffix: attributionSuffix,
-        });
-        return;
-      case 6:
-        if (!executor) return;
-        // bindRecipient=true, recipientWordIndex=2 → Aave withdraw.to is forced to the owner.
-        writeExecutor({
-          address: executor,
-          abi: kaneExecutorAbi,
-          functionName: "setAllowedSelector",
-          args: [aavePool, AAVE_WITHDRAW_SELECTOR, true, true, 2],
-          dataSuffix: attributionSuffix,
-        });
-        return;
-      case 7:
-        if (!executor) return;
-        writeExecutor({
-          address: executor,
-          abi: kaneExecutorAbi,
-          functionName: "setForbiddenSelectors",
-          args: [standardForbiddenSelectors(), true],
-          dataSuffix: attributionSuffix,
-        });
-        return;
-      case 8:
         // The executor pulls via transferFrom(owner) — the owner must approve it first.
         if (!executor) return;
         writeExecutor({
@@ -200,7 +163,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
           dataSuffix: attributionSuffix,
         });
         return;
-      case 9:
+      case 3:
         if (!executor || !aUsdc) return;
         writeExecutor({
           address: aUsdc,
@@ -224,8 +187,8 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
     (step === 0
       ? true
       : step === 1
-        ? Boolean(executor && agentValid)
-        : step === 3 || step === 9
+        ? Boolean(executor && agentValid && aUsdc)
+        : step === 3
           ? Boolean(executor && aUsdc)
           : Boolean(executor));
 
@@ -282,8 +245,8 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
         (kaneAgent && !override ? (
           <div className="flex flex-col gap-2">
             <span className="text-white/55 text-sm">
-              This is <strong className="text-white">KaneAI's agent</strong> — the dedicated key our
-              runtime signs with. You're granting it a bounded mandate, never custody.
+              Signing this authorizes <strong className="text-white">KaneAI's agent</strong> — the
+              dedicated key our runtime signs with. A bounded mandate, never custody.
             </span>
             <div className="border border-white/15 px-3 py-2.5 btn-cut-sm">
               <span className="font-mono text-white text-sm break-all">{kaneAgent}</span>
@@ -327,7 +290,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
           </label>
         ))}
 
-      {(step === 3 || step === 9) && !aUsdc && (
+      {(step === 1 || step === 3) && !aUsdc && (
         <p className="text-white/45 text-sm">Resolving aUSDC from Aave's data provider…</p>
       )}
 
