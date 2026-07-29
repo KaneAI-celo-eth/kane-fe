@@ -1,18 +1,19 @@
 import { useState } from "react";
+import { encodeFunctionData, erc20Abi, type Address } from "viem";
 import { useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { erc20Abi, type Address } from "viem";
-import { aaveDataProviderAbi } from "../abi/aave";
+import { kaneExecutorAbi } from "../abi/kaneExecutor";
+import { aaveDataProviderAbi, aavePoolAbi } from "../abi/aave";
 import { AAVE, USDC_CELO, explorerFor } from "../config/contracts";
 import { attributionSuffix } from "../config/attribution";
-import { executeAction, type ProposedAction } from "../config/agent";
+import type { ProposedAction } from "../config/agent";
 
 type Fundable = Extract<ProposedAction, { kind: "supply" | "withdraw" }>;
 
 /**
- * Owner-triggered execution. Every move is a fresh, EXACT approval right before it runs — the owner
- * approves precisely this amount, the executor pulls it, and no standing allowance is ever left
- * behind. So it's always Approve → Execute (two signatures), never a lingering blanket approval.
- * "The model advises; the chain decides" — the action is dry-run against the gate before it sends.
+ * MANUAL execution — the OWNER drives their own executor (two owner signatures: approve the exact
+ * amount, then call execute). The agent path is reserved for autonomous/scheduled actions; here the
+ * user is in the loop, so the user signs. Every move approves precisely this amount (no standing
+ * allowance), and the executor binds the position back to the owner + sweeps any residual.
  */
 export function ExecuteButton({
   action,
@@ -28,7 +29,7 @@ export function ExecuteButton({
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
 
-  // supply pulls USDC (known); withdraw pulls aUSDC — resolve it from Aave's data provider.
+  // withdraw pulls aUSDC — resolve it; supply pulls USDC (known).
   const { data: reserveTokens } = useReadContract({
     address: aave?.dataProvider,
     abi: aaveDataProviderAbi,
@@ -36,10 +37,16 @@ export function ExecuteButton({
     args: [USDC_CELO],
     query: { enabled: Boolean(aave) && action.kind === "withdraw" },
   });
-  const token: Address | undefined = action.kind === "supply" ? USDC_CELO : reserveTokens?.[0];
+  const aUsdc = reserveTokens?.[0];
+  const token: Address | undefined = action.kind === "supply" ? USDC_CELO : aUsdc;
   const amount = BigInt(action.amount);
 
-  // The executor pulls this token from the owner, so the owner must actually hold it.
+  const { data: version } = useReadContract({
+    address: executor,
+    abi: kaneExecutorAbi,
+    functionName: "version",
+  });
+
   const { data: balance } = useReadContract({
     address: token,
     abi: erc20Abi,
@@ -54,11 +61,39 @@ export function ExecuteButton({
   const [phase, setPhase] = useState<"idle" | "approving" | "executing">("idle");
   const [result, setResult] = useState<{ txHash?: string; error?: string } | null>(null);
 
+  /** The execute() payload (mirrors kane-be buildRebalance): pull → allowlisted Aave call, output
+   *  bound to the owner. */
+  function buildArgs() {
+    const pool = aave!.pool;
+    if (action.kind === "supply") {
+      const data = encodeFunctionData({
+        abi: aavePoolAbi,
+        functionName: "supply",
+        args: [USDC_CELO, amount, owner, 0],
+      });
+      return {
+        pulls: [{ token: USDC_CELO, amount }],
+        approvals: [{ token: USDC_CELO, spender: pool, amount }],
+        calls: [{ target: pool, value: 0n, data }],
+      } as const;
+    }
+    const data = encodeFunctionData({
+      abi: aavePoolAbi,
+      functionName: "withdraw",
+      args: [USDC_CELO, amount, owner],
+    });
+    return {
+      pulls: [{ token: aUsdc!, amount }],
+      approvals: [] as { token: Address; spender: Address; amount: bigint }[],
+      calls: [{ target: pool, value: 0n, data }],
+    } as const;
+  }
+
   async function run() {
-    if (!token || !publicClient) return;
+    if (!token || !publicClient || version === undefined) return;
     setResult(null);
     try {
-      // Always approve the EXACT amount, right now, right before the move — no standing allowance.
+      // 1) owner approves the EXACT amount (MetaMask)
       setPhase("approving");
       const approveHash = await writeContractAsync({
         address: token,
@@ -69,13 +104,21 @@ export function ExecuteButton({
       });
       await publicClient.waitForTransactionReceipt({ hash: approveHash });
 
-      // agent-signed, policy-bounded execute (consumes exactly the approval)
+      // 2) owner calls execute() on their OWN executor (MetaMask) — policy-bounded, bound to owner
       setPhase("executing");
-      const res = await executeAction(action, owner);
-      if (res.executed && res.txHash) setResult({ txHash: res.txHash });
-      else setResult({ error: res.error ?? res.dryRun?.reason ?? "the on-chain gate blocked this action" });
+      const { pulls, approvals, calls } = buildArgs();
+      const execHash = await writeContractAsync({
+        address: executor,
+        abi: kaneExecutorAbi,
+        functionName: "execute",
+        args: [pulls, approvals, calls, version],
+        dataSuffix: attributionSuffix,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: execHash });
+      setResult({ txHash: execHash });
     } catch (e) {
-      setResult({ error: e instanceof Error ? e.message : String(e) });
+      const msg = e instanceof Error ? e.message : String(e);
+      setResult({ error: msg.length > 200 ? msg.slice(0, 200) + "…" : msg });
     } finally {
       setPhase("idle");
     }
@@ -85,7 +128,7 @@ export function ExecuteButton({
   const label = busy
     ? phase === "approving"
       ? "Approve in wallet…"
-      : "Executing…"
+      : "Confirm execute…"
     : "Approve & Execute";
 
   return (
@@ -93,7 +136,7 @@ export function ExecuteButton({
       <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={run}
-          disabled={busy || !token || insufficient}
+          disabled={busy || !token || insufficient || version === undefined}
           className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
         >
           {label}
@@ -105,7 +148,7 @@ export function ExecuteButton({
             </span>
           ) : (
             <span className="text-white/40 text-xs">
-              Balance: {fmt(balance)} {tokenLabel} · approve {fmt(amount)}, then execute
+              Balance: {fmt(balance)} {tokenLabel} · you sign approve + execute
             </span>
           ))}
       </div>
