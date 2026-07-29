@@ -331,47 +331,27 @@ function Proposal({
   if (a.kind === "swap") {
     const q = result.quote;
     return (
-      <div className="flex flex-col gap-3">
-        <div className="border border-white/25 btn-cut-sm p-4 md:p-5">
-          <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">The model advises</p>
-          {q ? (
-            <>
-              <p className="text-white text-xl md:text-2xl font-normal tracking-[-0.01em]">
-                Swap {a.amount} {q.from}{" "}
-                <span className="text-white/45 text-base">
-                  → ≈ {Number(q.amountOutHuman).toLocaleString(undefined, { maximumFractionDigits: 6 })} {q.to}
-                </span>
-              </p>
-              <p className="text-white/35 text-xs font-mono mt-2 break-all">
-                via Ubeswap V2 · {q.hops} hop{q.hops > 1 ? "s" : ""} · 1% max slippage · pool-depth verified ·
-                recipient bound to you
-              </p>
-            </>
-          ) : (
-            <p className="text-sm" style={{ color: "#f87171" }}>
-              Can't route this swap — {result.error ?? "no pool / too thin on Ubeswap V2"}.
+      <div className="border border-white/25 btn-cut-sm p-4 md:p-5">
+        <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">Proposed move</p>
+        {q ? (
+          <>
+            <p className="text-white text-xl md:text-2xl font-normal tracking-[-0.01em]">
+              Swap {a.amount} {q.from}{" "}
+              <span className="text-white/45 text-base">
+                → ≈ {Number(q.amountOutHuman).toLocaleString(undefined, { maximumFractionDigits: 6 })} {q.to}
+              </span>
             </p>
-          )}
-        </div>
-        {q && (
-          <div className="border border-white/12 btn-cut-sm p-4">
-            <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-1.5">The chain decides</p>
-            {result.dryRun ? (
-              result.dryRun.ok ? (
-                <p className="text-white text-sm">Allowed ✓ — the input pull is within your on-chain policy.</p>
-              ) : (
-                <p className="text-sm" style={{ color: "#f87171" }}>
-                  Blocked — {result.dryRun.reason ?? "outside your policy"}.
-                </p>
-              )
-            ) : (
-              <p className="text-white/55 text-sm leading-relaxed">
-                Authorize an agent (with {q.from} provisioned + Ubeswap allowlisted) to dry-run this against
-                the gate. Output is <span className="text-white">bound to your wallet</span>; nothing executes
-                until the gate approves.
-              </p>
-            )}
-          </div>
+            <p className="text-white/35 text-xs mt-2">
+              via Ubeswap V2 · {q.hops} hop{q.hops > 1 ? "s" : ""} · 1% max slippage · recipient bound to you
+            </p>
+            <div className="mt-4 pt-3.5 border-t border-white/10">
+              <InlineVerdict result={result} />
+            </div>
+          </>
+        ) : (
+          <p className="text-sm" style={{ color: "#f87171" }}>
+            Can't route this swap — {result.error ?? "no pool / too thin on Ubeswap V2"}.
+          </p>
         )}
       </div>
     );
@@ -389,7 +369,7 @@ function Proposal({
   return (
     <div className="flex flex-col gap-3">
       <div className="border border-white/25 btn-cut-sm p-4 md:p-5">
-        <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">The model advises</p>
+        <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">Proposed move</p>
         <p className="text-white text-xl md:text-2xl font-normal tracking-[-0.01em]">
           {a.kind === "supply" ? "Supply" : "Withdraw"} {usdc(a.amount)}{" "}
           <span className="text-white/45 text-base">→ Aave V3</span>
@@ -397,9 +377,10 @@ function Proposal({
         <p className="text-white/35 text-xs mt-2">
           No address — the runtime resolves it, and the position is bound to your wallet.
         </p>
+        <div className="mt-4 pt-3.5 border-t border-white/10">
+          <InlineVerdict result={result} />
+        </div>
       </div>
-
-      <ChainVerdict result={result} />
       {executor && owner && (a.kind === "supply" || a.kind === "withdraw") && (
         <ExecuteButton action={a} executor={executor} owner={owner} />
       )}
@@ -407,51 +388,25 @@ function Proposal({
   );
 }
 
-// The demo policy the authorize-agent stepper provisions (mirrors kane-sc's fork test).
-const DEMO_PER_TX_USDC = 1000;
-
-function ChainVerdict({ result }: { result: IntentResult }) {
-  // Real verdict: the on-chain gate dry-ran the pull (needs a deployed executor).
-  if (result.dryRun) {
-    const ok = result.dryRun.ok;
-    return (
-      <div className="border border-white/12 btn-cut-sm p-4">
-        <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-1.5">The chain decides</p>
-        {ok ? (
+/** The "chain decides" half, inline inside the proposal card. When an executor exists this is the
+ *  REAL on-chain dry-run (Allowed/Blocked); otherwise a short note that the gate runs on execute. */
+function InlineVerdict({ result }: { result: IntentResult }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase">The chain decides</p>
+      {result.dryRun ? (
+        result.dryRun.ok ? (
           <p className="text-white text-sm">Allowed ✓ — within your on-chain policy.</p>
         ) : (
           <p className="text-sm" style={{ color: "#f87171" }}>
             Blocked — {result.dryRun.reason ?? "outside your policy"}.
           </p>
-        )}
-      </div>
-    );
-  }
-
-  // Pre-deploy: an honest client-side preview against the demo caps, clearly labelled.
-  const a = result.action;
-  const amt = a.kind === "supply" || a.kind === "withdraw" ? Number(a.amount) / 1e6 : 0;
-  const within = amt <= DEMO_PER_TX_USDC;
-  return (
-    <div className="border border-white/12 btn-cut-sm p-4">
-      <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-1.5">
-        The chain decides <span className="text-white/25 normal-case tracking-normal">· preview</span>
-      </p>
-      {within ? (
-        <p className="text-white text-sm">
-          Within the demo policy ✓ — {amt} USDC ≤ {DEMO_PER_TX_USDC} USDC per-tx cap.
-        </p>
+        )
       ) : (
-        <p className="text-sm" style={{ color: "#f87171" }}>
-          Exceeds the demo policy ✕ — {amt} USDC &gt; {DEMO_PER_TX_USDC} USDC per-tx cap → the gate
-          would revert.
+        <p className="text-white/55 text-sm leading-relaxed">
+          Runs against your on-chain policy gate on execute — nothing moves until it approves.
         </p>
       )}
-      <p className="text-white/45 text-xs mt-2 leading-relaxed">
-        Client-side preview against the demo caps. Authorize an agent to run the{" "}
-        <span className="text-white/70">real on-chain gate</span> — the proposal is never executed
-        until it approves.
-      </p>
     </div>
   );
 }
