@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
-import { erc20Abi, maxUint256, type Address } from "viem";
+import { erc20Abi, type Address } from "viem";
 import { aaveDataProviderAbi } from "../abi/aave";
 import { AAVE, USDC_CELO, explorerFor } from "../config/contracts";
 import { attributionSuffix } from "../config/attribution";
@@ -9,10 +9,10 @@ import { executeAction, type ProposedAction } from "../config/agent";
 type Fundable = Extract<ProposedAction, { kind: "supply" | "withdraw" }>;
 
 /**
- * Owner-triggered execution with a JUST-IN-TIME allowance. The owner never pre-approves during
- * register; the first time they move a token, this grants the executor its allowance (owner-signed),
- * then asks kane-be's central agent to run the bounded `execute()`. "The model advises; the chain
- * decides" — the action is still dry-run against the on-chain gate before it sends.
+ * Owner-triggered execution. Every move is a fresh, EXACT approval right before it runs — the owner
+ * approves precisely this amount, the executor pulls it, and no standing allowance is ever left
+ * behind. So it's always Approve → Execute (two signatures), never a lingering blanket approval.
+ * "The model advises; the chain decides" — the action is dry-run against the gate before it sends.
  */
 export function ExecuteButton({
   action,
@@ -39,15 +39,6 @@ export function ExecuteButton({
   const token: Address | undefined = action.kind === "supply" ? USDC_CELO : reserveTokens?.[0];
   const amount = BigInt(action.amount);
 
-  const { data: allowance, refetch: refetchAllowance } = useReadContract({
-    address: token,
-    abi: erc20Abi,
-    functionName: "allowance",
-    args: [owner, executor],
-    query: { enabled: Boolean(token) },
-  });
-  const needsApprove = allowance !== undefined && allowance < amount;
-
   // The executor pulls this token from the owner, so the owner must actually hold it.
   const { data: balance } = useReadContract({
     address: token,
@@ -67,20 +58,18 @@ export function ExecuteButton({
     if (!token || !publicClient) return;
     setResult(null);
     try {
-      // JIT allowance — only when this move actually needs it, signed by the owner.
-      if (allowance === undefined || allowance < amount) {
-        setPhase("approving");
-        const approveHash = await writeContractAsync({
-          address: token,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [executor, maxUint256],
-          dataSuffix: attributionSuffix,
-        });
-        await publicClient.waitForTransactionReceipt({ hash: approveHash });
-        await refetchAllowance();
-      }
-      // agent-signed, policy-bounded execute
+      // Always approve the EXACT amount, right now, right before the move — no standing allowance.
+      setPhase("approving");
+      const approveHash = await writeContractAsync({
+        address: token,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [executor, amount],
+        dataSuffix: attributionSuffix,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: approveHash });
+
+      // agent-signed, policy-bounded execute (consumes exactly the approval)
       setPhase("executing");
       const res = await executeAction(action, owner);
       if (res.executed && res.txHash) setResult({ txHash: res.txHash });
@@ -97,9 +86,7 @@ export function ExecuteButton({
     ? phase === "approving"
       ? "Approve in wallet…"
       : "Executing…"
-    : needsApprove
-      ? "Approve & Execute"
-      : "Execute";
+    : "Approve & Execute";
 
   return (
     <div className="flex flex-col gap-2">
@@ -118,8 +105,7 @@ export function ExecuteButton({
             </span>
           ) : (
             <span className="text-white/40 text-xs">
-              Balance: {fmt(balance)} {tokenLabel}
-              {needsApprove && !busy && !result ? " · approves once, then executes" : ""}
+              Balance: {fmt(balance)} {tokenLabel} · approve {fmt(amount)}, then execute
             </span>
           ))}
       </div>
