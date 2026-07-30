@@ -1,19 +1,18 @@
-import { useState } from "react";
-import { encodeFunctionData, erc20Abi, type Address } from "viem";
+import { useEffect, useState } from "react";
+import { erc20Abi, type Address } from "viem";
 import { useChainId, usePublicClient, useReadContract, useWriteContract } from "wagmi";
 import { kaneExecutorAbi } from "../abi/kaneExecutor";
-import { aaveDataProviderAbi, aavePoolAbi } from "../abi/aave";
-import { AAVE, USDC_CELO, explorerFor } from "../config/contracts";
+import { explorerFor } from "../config/contracts";
 import { attributionSuffix } from "../config/attribution";
-import type { ProposedAction } from "../config/agent";
+import { buildExecute, type BuiltExecute, type ProposedAction } from "../config/agent";
 
-type Fundable = Extract<ProposedAction, { kind: "supply" | "withdraw" }>;
+type Fundable = Extract<ProposedAction, { kind: "supply" | "withdraw" | "swap" }>;
 
 /**
  * MANUAL execution — the OWNER drives their own executor (two owner signatures: approve the exact
- * amount, then call execute). The agent path is reserved for autonomous/scheduled actions; here the
- * user is in the loop, so the user signs. Every move approves precisely this amount (no standing
- * allowance), and the executor binds the position back to the owner + sweeps any residual.
+ * input amount, then call execute). The agent path is reserved for autonomous/scheduled actions.
+ * The execute() payload (pull → allowlisted Aave/Ubeswap call, output bound to the owner) is built
+ * server-side (/build) so path resolution + slippage live in one place; the owner signs it.
  */
 export function ExecuteButton({
   action,
@@ -25,27 +24,30 @@ export function ExecuteButton({
   owner: Address;
 }) {
   const chainId = useChainId();
-  const aave = AAVE[chainId];
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
 
-  // withdraw pulls aUSDC — resolve it; supply pulls USDC (known).
-  const { data: reserveTokens } = useReadContract({
-    address: aave?.dataProvider,
-    abi: aaveDataProviderAbi,
-    functionName: "getReserveTokensAddresses",
-    args: [USDC_CELO],
-    query: { enabled: Boolean(aave) && action.kind === "withdraw" },
-  });
-  const aUsdc = reserveTokens?.[0];
-  const token: Address | undefined = action.kind === "supply" ? USDC_CELO : aUsdc;
-  const amount = BigInt(action.amount);
+  const [built, setBuilt] = useState<BuiltExecute | null>(null);
+  const [buildErr, setBuildErr] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"idle" | "approving" | "executing">("idle");
+  const [result, setResult] = useState<{ txHash?: string; error?: string } | null>(null);
 
-  const { data: version } = useReadContract({
-    address: executor,
-    abi: kaneExecutorAbi,
-    functionName: "version",
-  });
+  // Ask the gateway to build the execute() payload for this action (once).
+  useEffect(() => {
+    let live = true;
+    setBuilt(null);
+    setBuildErr(null);
+    void buildExecute(action, owner)
+      .then((b) => live && setBuilt(b))
+      .catch((e) => live && setBuildErr(e instanceof Error ? e.message : String(e)));
+    return () => {
+      live = false;
+    };
+  }, [action, owner]);
+
+  const token = built?.inputToken;
+  const amount = built?.inputAmount;
+  const decimals = built?.inputToken === undefined ? 6 : action.kind === "swap" ? 18 : 6;
 
   const { data: balance } = useReadContract({
     address: token,
@@ -54,46 +56,16 @@ export function ExecuteButton({
     args: [owner],
     query: { enabled: Boolean(token) },
   });
-  const insufficient = balance !== undefined && balance < amount;
-  const fmt = (v: bigint) => (Number(v) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 });
-  const tokenLabel = action.kind === "supply" ? "USDC" : "aUSDC";
-
-  const [phase, setPhase] = useState<"idle" | "approving" | "executing">("idle");
-  const [result, setResult] = useState<{ txHash?: string; error?: string } | null>(null);
-
-  /** The execute() payload (mirrors kane-be buildRebalance): pull → allowlisted Aave call, output
-   *  bound to the owner. */
-  function buildArgs() {
-    const pool = aave!.pool;
-    if (action.kind === "supply") {
-      const data = encodeFunctionData({
-        abi: aavePoolAbi,
-        functionName: "supply",
-        args: [USDC_CELO, amount, owner, 0],
-      });
-      return {
-        pulls: [{ token: USDC_CELO, amount }],
-        approvals: [{ token: USDC_CELO, spender: pool, amount }],
-        calls: [{ target: pool, value: 0n, data }],
-      } as const;
-    }
-    const data = encodeFunctionData({
-      abi: aavePoolAbi,
-      functionName: "withdraw",
-      args: [USDC_CELO, amount, owner],
-    });
-    return {
-      pulls: [{ token: aUsdc!, amount }],
-      approvals: [] as { token: Address; spender: Address; amount: bigint }[],
-      calls: [{ target: pool, value: 0n, data }],
-    } as const;
-  }
+  const insufficient = balance !== undefined && amount !== undefined && balance < amount;
+  const fmt = (v: bigint) => (Number(v) / 10 ** decimals).toLocaleString(undefined, { maximumFractionDigits: 4 });
+  const tokenLabel =
+    action.kind === "supply" ? "USDC" : action.kind === "withdraw" ? "aUSDC" : action.from;
 
   async function run() {
-    if (!token || !publicClient || version === undefined) return;
+    if (!built || !token || amount === undefined || !publicClient) return;
     setResult(null);
     try {
-      // 1) owner approves the EXACT amount (MetaMask)
+      // 1) owner approves the EXACT input amount (MetaMask)
       setPhase("approving");
       const approveHash = await writeContractAsync({
         address: token,
@@ -104,14 +76,13 @@ export function ExecuteButton({
       });
       await publicClient.waitForTransactionReceipt({ hash: approveHash });
 
-      // 2) owner calls execute() on their OWN executor (MetaMask) — policy-bounded, bound to owner
+      // 2) owner calls execute() on their OWN executor with the server-built payload (MetaMask)
       setPhase("executing");
-      const { pulls, approvals, calls } = buildArgs();
       const execHash = await writeContractAsync({
         address: executor,
         abi: kaneExecutorAbi,
         functionName: "execute",
-        args: [pulls, approvals, calls, version],
+        args: [built.pulls, built.approvals, built.calls, built.version],
         dataSuffix: attributionSuffix,
       });
       await publicClient.waitForTransactionReceipt({ hash: execHash });
@@ -124,24 +95,36 @@ export function ExecuteButton({
     }
   }
 
+  if (buildErr) {
+    return (
+      <p className="text-xs break-words" style={{ color: "#f87171" }}>
+        Can't build this move — {buildErr}
+      </p>
+    );
+  }
+
   const busy = phase !== "idle";
+  const ready = Boolean(built && token && amount !== undefined);
   const label = busy
     ? phase === "approving"
       ? "Approve in wallet…"
       : "Confirm execute…"
-    : "Approve & Execute";
+    : !ready
+      ? "Preparing…"
+      : "Approve & Execute";
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3 flex-wrap">
         <button
           onClick={run}
-          disabled={busy || !token || insufficient || version === undefined}
+          disabled={busy || !ready || insufficient}
           className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
         >
           {label}
         </button>
         {balance !== undefined &&
+          amount !== undefined &&
           (insufficient ? (
             <span className="text-xs" style={{ color: "#f87171" }}>
               You have {fmt(balance)} {tokenLabel} — need {fmt(amount)} to {action.kind}.

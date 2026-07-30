@@ -356,28 +356,31 @@ function Proposal({
   if (a.kind === "swap") {
     const q = result.quote;
     return (
-      <div className="border border-white/25 btn-cut-sm p-4 md:p-5">
-        <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">Proposed move</p>
-        {q ? (
-          <>
-            <p className="text-white text-xl md:text-2xl font-normal tracking-[-0.01em]">
-              Swap {a.amount} {q.from}{" "}
-              <span className="text-white/45 text-base">
-                → ≈ {Number(q.amountOutHuman).toLocaleString(undefined, { maximumFractionDigits: 6 })} {q.to}
-              </span>
+      <div className="flex flex-col gap-3">
+        <div className="border border-white/25 btn-cut-sm p-4 md:p-5">
+          <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">Proposed move</p>
+          {q ? (
+            <>
+              <p className="text-white text-xl md:text-2xl font-normal tracking-[-0.01em]">
+                Swap {a.amount} {q.from}{" "}
+                <span className="text-white/45 text-base">
+                  → ≈ {Number(q.amountOutHuman).toLocaleString(undefined, { maximumFractionDigits: 6 })} {q.to}
+                </span>
+              </p>
+              <p className="text-white/35 text-xs mt-2">
+                via Ubeswap V2 · {q.hops} hop{q.hops > 1 ? "s" : ""} · 1% max slippage · recipient bound to you
+              </p>
+              <div className="mt-4 pt-3.5 border-t border-white/10">
+                <InlineVerdict result={result} />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm" style={{ color: "#f87171" }}>
+              Can't route this swap — {result.error ?? "no pool / too thin on Ubeswap V2"}.
             </p>
-            <p className="text-white/35 text-xs mt-2">
-              via Ubeswap V2 · {q.hops} hop{q.hops > 1 ? "s" : ""} · 1% max slippage · recipient bound to you
-            </p>
-            <div className="mt-4 pt-3.5 border-t border-white/10">
-              <InlineVerdict result={result} />
-            </div>
-          </>
-        ) : (
-          <p className="text-sm" style={{ color: "#f87171" }}>
-            Can't route this swap — {result.error ?? "no pool / too thin on Ubeswap V2"}.
-          </p>
-        )}
+          )}
+        </div>
+        {q && executor && owner && <ExecuteButton action={a} executor={executor} owner={owner} />}
       </div>
     );
   }

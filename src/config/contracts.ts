@@ -20,6 +20,20 @@ export function factoryAddress(chainId: number): Address | undefined {
 /** Canonical Celo mainnet USDC (6d) — the demo rebalance asset. */
 export const USDC_CELO: Address = "0xcebA9300f2b948710d2653dD7B07f33A8B32118C";
 
+/** Mento stablecoins (18d) — the deep-pool swap pair on Ubeswap V2 (per Celopedia). */
+export const USDM_CELO: Address = "0x765DE816845861e75A25fCA122bb6898B8B1282a";
+export const EURM_CELO: Address = "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73";
+
+/**
+ * Ubeswap V2 (Uniswap-V2 fork) on Celo mainnet — the swap venue. `swapExactTokensForTokens(uint,
+ * uint, address[] path, address to, uint deadline)` puts `to` at a STATIC head word (index 3), so
+ * the executor binds the swap recipient to the owner. Sourced from Celopedia.
+ */
+export const UBESWAP: Record<number, { router: Address } | undefined> = {
+  [celo.id]: { router: "0xE3D8bd6Aed4F159bc8000a9cD47CffDb95F96121" },
+  [celoSepolia.id]: undefined,
+};
+
 /**
  * Aave V3 on Celo (mainnet). Sourced from Celopedia `references/contracts.md`.
  * `dataProvider` resolves the aToken (aUSDC) on demand — the executor supplies USDC and
@@ -43,7 +57,8 @@ export interface TokenInfo {
 export const TOKENS: Record<number, TokenInfo[]> = {
   [celo.id]: [
     { symbol: "USDC", address: USDC_CELO, decimals: 6 },
-    { symbol: "USDm", address: "0x765DE816845861e75A25fCA122bb6898B8B1282a", decimals: 18 },
+    { symbol: "USDm", address: USDM_CELO, decimals: 18 },
+    { symbol: "EURm", address: EURM_CELO, decimals: 18 },
   ],
   [celoSepolia.id]: [],
 };

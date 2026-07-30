@@ -39,6 +39,45 @@ export type ExecuteResult = {
   error?: string;
 };
 
+/** The execute() payload the OWNER signs, built server-side (path resolution, amountOutMin, etc.). */
+export type BuiltExecute = {
+  executor: `0x${string}`;
+  version: number;
+  inputToken: `0x${string}`;
+  inputAmount: bigint;
+  dryRun?: DryRun;
+  pulls: { token: `0x${string}`; amount: bigint }[];
+  approvals: { token: `0x${string}`; spender: `0x${string}`; amount: bigint }[];
+  calls: { target: `0x${string}`; value: bigint; data: `0x${string}` }[];
+  quote?: { from: string; to: string; amountOutHuman: string; hops: number };
+};
+
+/** POST /build — the agent gateway returns the execute() payload for `action`, for the OWNER to
+ *  sign themselves (approve the input token, then call execute()). Bigints come back as strings. */
+export async function buildExecute(
+  action: ProposedAction,
+  owner: string,
+): Promise<BuiltExecute> {
+  const res = await fetch(`${AGENT_API}/build`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ owner, action }),
+  });
+  const b = (await res.json().catch(() => ({}))) as Record<string, unknown> & { error?: string };
+  if (!res.ok) throw new Error(b.error ?? `HTTP ${res.status}`);
+  return {
+    executor: b.executor as `0x${string}`,
+    version: Number(b.version),
+    inputToken: b.inputToken as `0x${string}`,
+    inputAmount: BigInt(b.inputAmount as string),
+    dryRun: b.dryRun as DryRun | undefined,
+    pulls: (b.pulls as { token: `0x${string}`; amount: string }[]).map((p) => ({ token: p.token, amount: BigInt(p.amount) })),
+    approvals: (b.approvals as { token: `0x${string}`; spender: `0x${string}`; amount: string }[]).map((a) => ({ token: a.token, spender: a.spender, amount: BigInt(a.amount) })),
+    calls: (b.calls as { target: `0x${string}`; value: string; data: `0x${string}` }[]).map((cl) => ({ target: cl.target, value: BigInt(cl.value), data: cl.data })),
+    quote: b.quote as BuiltExecute["quote"],
+  };
+}
+
 /** POST /execute — the agent (kane-be's central signer) executes EXACTLY this proposed action
  *  against the owner's executor: dry-run → attribution-tagged `execute()`. The owner grants the
  *  ERC-20 allowance separately (just-in-time), in their own wallet, before calling this. */
