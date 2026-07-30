@@ -96,7 +96,7 @@ export function Landing() {
               >
                 The Model Advises
                 <br />
-                The Chain Decides
+                Your Policy Decides
                 <br />
                 KaneAI on Celo
               </h1>
@@ -110,8 +110,8 @@ export function Landing() {
               style={{ animationDelay: "0.7s" }}
             >
               <p className="text-white text-sm leading-relaxed max-w-[260px] text-center md:text-left md:ml-auto">
-                An AI agent proposes each move; a deterministic on-chain policy
-                gate decides whether it runs. Your funds never leave your wallet.
+                An AI agent proposes each move; your deterministic on-chain
+                policy decides whether it runs. Your funds never leave your wallet.
               </p>
             </div>
 

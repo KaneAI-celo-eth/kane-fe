@@ -87,8 +87,8 @@ function ConsoleBody() {
         Talk to your agent.
       </h1>
       <p className="text-white/65 text-base leading-relaxed mt-4 max-w-2xl">
-        Tell it what you want in plain language. It proposes one concrete move — the on-chain gate
-        decides whether it runs.
+        Tell it what you want in plain language. It proposes one concrete move — your on-chain
+        policy decides whether it runs.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 border border-white/12 btn-cut-sm px-4 py-3 bg-black/40 backdrop-blur-md">

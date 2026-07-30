@@ -25,7 +25,7 @@ const STEPS = [
   },
   {
     title: "Let it work",
-    body: "The agent proposes a rebalance; the on-chain policy gate decides; every position settles back to your wallet. Revoke anytime.",
+    body: "The agent proposes a rebalance; your on-chain policy decides; every position settles back to your wallet. Revoke anytime.",
   },
 ];
 

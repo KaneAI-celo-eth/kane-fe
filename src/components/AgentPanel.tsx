@@ -388,12 +388,12 @@ function Proposal({
   );
 }
 
-/** The "chain decides" half, inline inside the proposal card. When an executor exists this is the
- *  REAL on-chain dry-run (Allowed/Blocked); otherwise a short note that the gate runs on execute. */
+/** The "your policy decides" half, inline inside the proposal card. When an executor exists this is
+ *  the REAL on-chain dry-run (Allowed/Blocked); otherwise a short note that it runs on execute. */
 function InlineVerdict({ result }: { result: IntentResult }) {
   return (
     <div className="flex flex-col gap-1">
-      <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase">The chain decides</p>
+      <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase">Your policy decides</p>
       {result.dryRun ? (
         result.dryRun.ok ? (
           <p className="text-white text-sm">Allowed ✓ — within your on-chain policy.</p>
