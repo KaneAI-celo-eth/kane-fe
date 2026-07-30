@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useConnection } from "wagmi";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useChainId, useConnection, useWalletClient } from "wagmi";
 import type { Address } from "viem";
-import { AGENT_API, proposeIntent, type ChatTurn, type IntentResult } from "../config/agent";
+import { AGENT_API, fetchGatewayInfo, proposeIntent, type ChatTurn, type IntentResult } from "../config/agent";
+import { makePayFetch } from "../config/x402";
 import { useChatSessions } from "../hooks/useChatSessions";
 import { ExecuteButton } from "./ExecuteButton";
 
@@ -30,6 +31,14 @@ function summarize(r: IntentResult): string {
 
 export function AgentPanel({ executor }: { executor?: Address }) {
   const { address } = useConnection();
+  const chainId = useChainId();
+  const { data: walletClient } = useWalletClient();
+  // Wrap the gateway fetch to auto-pay the 0.01 USDC-per-prompt x402 charge with the connected
+  // wallet. Only pays if the server returns 402 (mainnet); free/dev returns 200 → no charge.
+  const payFetch = useMemo(
+    () => (walletClient ? makePayFetch(walletClient, chainId) : undefined),
+    [walletClient, chainId],
+  );
   const chat = useChatSessions();
   const { active, sessions, activeId, newSession, ensureSession, selectSession, deleteSession, updateMessages, getMessages } = chat;
 
@@ -37,7 +46,18 @@ export function AgentPanel({ executor }: { executor?: Address }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [paid, setPaid] = useState(false); // gateway charges 0.01 USDC per prompt (x402)
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let live = true;
+    void fetchGatewayInfo().then((g) => {
+      if (live && g) setPaid(g.x402);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const messages = active?.messages ?? [];
   const empty = messages.length === 0;
@@ -57,7 +77,7 @@ export function AgentPanel({ executor }: { executor?: Address }) {
     updateMessages(sid, (prev) => [...prev, { role: "user", text: q }]);
     setLoading(true);
     try {
-      const result = await proposeIntent(q, address ?? undefined, history);
+      const result = await proposeIntent(q, address ?? undefined, history, payFetch);
       updateMessages(sid, (prev) => [...prev, { role: "agent", result }]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -219,6 +239,11 @@ export function AgentPanel({ executor }: { executor?: Address }) {
               >
                 New chat
               </button>
+            )}
+            {paid && (
+              <span className="ml-auto text-white/40 text-xs" title="Pay-per-call via x402 (EIP-3009 USDC)">
+                0.01 USDC / prompt · x402
+              </span>
             )}
           </div>
         </div>

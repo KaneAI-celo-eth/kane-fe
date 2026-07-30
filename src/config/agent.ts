@@ -57,24 +57,34 @@ export async function executeAction(action: ProposedAction, owner: string): Prom
  *  or null if the backend has no key configured / is unreachable. The console authorizes THIS
  *  address — the user never has to know or type it. */
 export async function fetchAgentAddress(): Promise<`0x${string}` | null> {
+  return (await fetchGatewayInfo())?.agent ?? null;
+}
+
+/** GET /health → gateway info: the agent signer + whether x402 (pay-per-prompt) is active. */
+export async function fetchGatewayInfo(): Promise<{ agent: `0x${string}` | null; x402: boolean } | null> {
   try {
     const res = await fetch(`${AGENT_API}/health`);
     if (!res.ok) return null;
-    const h = (await res.json()) as { agent?: string | null };
-    return h.agent && h.agent.startsWith("0x") ? (h.agent as `0x${string}`) : null;
+    const h = (await res.json()) as { agent?: string | null; x402?: boolean };
+    return {
+      agent: h.agent && h.agent.startsWith("0x") ? (h.agent as `0x${string}`) : null,
+      x402: Boolean(h.x402),
+    };
   } catch {
     return null;
   }
 }
 
 /** POST /intent — the model proposes a concrete action (and dry-runs it when an executor exists).
- *  `history` carries prior turns for a multi-turn chat. */
+ *  `history` carries prior turns for a multi-turn chat. `payFetch` (from makePayFetch) auto-pays
+ *  the 0.01 USDC-per-prompt x402 charge when the gateway requires it; omit for free/dev. */
 export async function proposeIntent(
   intent: string,
   owner?: string,
   history?: ChatTurn[],
+  payFetch: typeof fetch = fetch,
 ): Promise<IntentResult> {
-  const res = await fetch(`${AGENT_API}/intent`, {
+  const res = await payFetch(`${AGENT_API}/intent`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
