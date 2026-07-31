@@ -1,9 +1,9 @@
 {
-  "name": "vortxlab-creations",
+  "name": "kane-fe",
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "VortxLab Creations — immersive full-screen landing page.",
+  "description": "KaneAI — landing + console for the non-custodial stablecoin agent on Celo (React + Vite + wagmi).",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
