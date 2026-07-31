@@ -1,6 +1,12 @@
 // The kane-be agent gateway. The console asks it for a proposal; the model advises.
-export const AGENT_API =
-  (import.meta.env as Record<string, string | undefined>).VITE_AGENT_API ?? "http://localhost:8787";
+//
+// In production the app is served same-origin and reaches the backend through a `/api` proxy
+// (see vercel.json → rewrites). That keeps every request on the app's own origin, so it dodges
+// cross-site blockers (e.g. Brave Shields filtering the raw backend host) and needs no CORS.
+// Dev/anvil can still point somewhere else via VITE_AGENT_API.
+export const AGENT_API = import.meta.env.PROD
+  ? "/api"
+  : ((import.meta.env as Record<string, string | undefined>).VITE_AGENT_API ?? "http://localhost:8787");
 
 export type ProposedAction =
   | { kind: "answer"; text: string }
