@@ -15,7 +15,7 @@ const GOLD = "247, 201, 72"; // Celo-ish gold, as an rgb triplet for rgba()
 // The logo mark: four quarter-circle blades rotated around the centre.
 const BLADE = "M128 128 L128 0 A128 128 0 0 0 256 128 Z";
 
-function Blades({ size, opacity, blur }: { size: number; opacity: number; blur: number }) {
+export function Blades({ size, opacity, blur }: { size: number; opacity: number; blur: number }) {
   return (
     <svg
       width={size}
@@ -34,7 +34,9 @@ function Blades({ size, opacity, blur }: { size: number; opacity: number; blur: 
 
 const PARTICLES = 70;
 
-const KaneBackground: React.FC = () => {
+export const GOLD_RGB = GOLD;
+
+export const KaneBackground: React.FC = () => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
 

@@ -6,3 +6,7 @@ dist/
 *.log
 .DS_Store
 .vercel
+remotion/.agents/
+remotion/.agents/
+remotion/.claude/
+remotion/skills-lock.json
