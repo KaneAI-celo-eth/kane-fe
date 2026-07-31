@@ -17,7 +17,7 @@ import { Blades, KaneBackground, GOLD_RGB } from "./Composition";
 const FPS = 30;
 const WIDTH = 1920;
 const HEIGHT = 1080;
-const DURATION = 1200; // 40s (VO ≈ 38.6s + tail)
+const DURATION = 1080; // 36s (Samantha VO ≈ 35.3s + short tail)
 const GOLD = `rgb(${GOLD_RGB})`;
 const FONT = '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif';
 const EASE = Easing.bezier(0.16, 1, 0.3, 1);
@@ -217,13 +217,13 @@ const KanePromo: React.FC = () => {
 
       <Audio src={staticFile("vo.m4a")} />
 
-      <Sequence from={0} durationInFrames={120}><SceneIntro /></Sequence>
-      <Sequence from={120} durationInFrames={112}><SceneTagline /></Sequence>
-      <Sequence from={232} durationInFrames={368}><SceneGuardrails /></Sequence>
-      <Sequence from={600} durationInFrames={180}><SceneBoundary /></Sequence>
-      <Sequence from={780} durationInFrames={180}><SceneOneChat /></Sequence>
-      <Sequence from={960} durationInFrames={150}><SceneLive /></Sequence>
-      <Sequence from={1110} durationInFrames={90}><SceneOutro /></Sequence>
+      <Sequence from={0} durationInFrames={105}><SceneIntro /></Sequence>
+      <Sequence from={105} durationInFrames={84}><SceneTagline /></Sequence>
+      <Sequence from={189} durationInFrames={330}><SceneGuardrails /></Sequence>
+      <Sequence from={519} durationInFrames={150}><SceneBoundary /></Sequence>
+      <Sequence from={669} durationInFrames={150}><SceneOneChat /></Sequence>
+      <Sequence from={819} durationInFrames={135}><SceneLive /></Sequence>
+      <Sequence from={954} durationInFrames={126}><SceneOutro /></Sequence>
     </AbsoluteFill>
   );
 };
