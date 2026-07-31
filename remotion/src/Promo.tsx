@@ -215,7 +215,8 @@ const KanePromo: React.FC = () => {
       </AbsoluteFill>
       <AbsoluteFill style={{ background: "rgba(4,6,10,0.35)" }} />
 
-      <Audio src={staticFile("vo.m4a")} />
+      {/* subtle ambient bed (no voice-over) — swap public/music.m4a for any track you like */}
+      <Audio src={staticFile("music.m4a")} volume={0.7} />
 
       <Sequence from={0} durationInFrames={105}><SceneIntro /></Sequence>
       <Sequence from={105} durationInFrames={84}><SceneTagline /></Sequence>
