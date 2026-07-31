@@ -3,6 +3,7 @@ import {
   Audio,
   Composition,
   Easing,
+  Img,
   interpolate,
   Sequence,
   spring,
@@ -72,11 +73,9 @@ const SceneTagline: React.FC = () => (
   </AbsoluteFill>
 );
 
-// ---- Scene 3 — LIVE CONSOLE MOCKUP (centerpiece) ---------------------------
+// ---- Scene 3 — LIVE CONSOLE MOCKUP (centerpiece): ask about the ecosystem ---
 const SceneConsole: React.FC = () => {
-  const frame = useCurrentFrame();
   const win = useAppear(0, { from: 0.9, rise: 30 });
-  const executed = frame > 150;
   return (
     <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
       <div
@@ -104,44 +103,31 @@ const SceneConsole: React.FC = () => {
 
         {/* console body */}
         <div style={{ padding: 40, display: "flex", flexDirection: "column", gap: 22 }}>
-          {/* executor bar */}
-          <div style={{ ...useAppear(8), display: "flex", gap: 14, alignItems: "center", border: "1px solid rgba(255,255,255,0.12)", padding: "12px 18px", clipPath: CUT(10) }}>
-            <span style={{ color: "rgba(255,255,255,0.4)", fontFamily: FONT, fontSize: 15, letterSpacing: "0.18em" }}>YOUR EXECUTOR</span>
-            <span style={{ color: "rgba(255,255,255,0.8)", fontFamily: MONO, fontSize: 18 }}>0xBc76bA827e18eB4c910f44eA0cDE6786059C62eD</span>
+          {/* user question */}
+          <div style={{ ...useAppear(14, { rise: 8 }), alignSelf: "flex-end", maxWidth: "80%", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", padding: "14px 20px", clipPath: CUT(10) }}>
+            <span style={{ color: "white", fontFamily: FONT, fontSize: 24 }}>What's the best USDC yield on Celo right now?</span>
           </div>
 
-          {/* user bubble */}
-          <div style={{ ...useAppear(22, { rise: 8 }), alignSelf: "flex-end", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)", padding: "14px 20px", clipPath: CUT(10) }}>
-            <span style={{ color: "white", fontFamily: FONT, fontSize: 24 }}>supply 100 USDC into Aave</span>
-          </div>
-
-          {/* proposal card */}
-          <div style={{ ...useAppear(42, { from: 0.94, rise: 14 }), border: "1px solid rgba(255,255,255,0.25)", padding: "22px 26px", clipPath: CUT(12) }}>
-            <div style={{ color: "rgba(255,255,255,0.4)", fontFamily: FONT, fontSize: 15, letterSpacing: "0.18em", marginBottom: 10 }}>PROPOSED MOVE</div>
-            <div style={{ color: "white", fontFamily: FONT, fontSize: 40, fontWeight: 400, letterSpacing: "-0.01em" }}>
-              Supply 100 USDC <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 28 }}>→ Aave V3</span>
+          {/* agent answer */}
+          <div style={{ ...useAppear(40, { from: 0.94, rise: 14 }), border: "1px solid rgba(255,255,255,0.25)", padding: "24px 28px", clipPath: CUT(12) }}>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontFamily: FONT, fontSize: 15, letterSpacing: "0.18em", marginBottom: 14 }}>THE AGENT SAYS</div>
+            <div style={{ color: "white", fontFamily: FONT, fontSize: 30, fontWeight: 400, lineHeight: 1.4 }}>
+              <span style={{ color: GOLD }}>Aave V3</span> is the safest spot — supplying USDC earns about <span style={{ color: GOLD }}>3% APR</span>, read live on-chain.
             </div>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.1)", margin: "18px 0" }} />
-            <div style={{ ...useAppear(66), }}>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontFamily: FONT, fontSize: 15, letterSpacing: "0.18em", marginBottom: 6 }}>YOUR POLICY DECIDES</div>
-              <div style={{ color: "white", fontFamily: FONT, fontSize: 24 }}>
-                Allowed <span style={{ color: GOLD }}>✓</span> — within your on-chain policy.
-              </div>
+            <div style={{ ...useAppear(64), color: "rgba(255,255,255,0.6)", fontFamily: FONT, fontSize: 24, lineHeight: 1.4, marginTop: 12 }}>
+              Uniswap V3 LP pools can pay more (some have Merkl incentives), but you take on impermanent-loss risk.
             </div>
           </div>
 
-          {/* execute button → done */}
-          <div style={{ ...useAppear(88, { rise: 8 }), display: "flex", alignItems: "center", gap: 18 }}>
-            {!executed ? (
-              <div style={{ background: "white", color: "black", fontFamily: FONT, fontSize: 22, fontWeight: 500, padding: "16px 34px", clipPath: CUT(12) }}>
-                Approve &amp; Execute
-              </div>
-            ) : (
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{ color: "white", fontFamily: FONT, fontSize: 24 }}>Done <span style={{ color: GOLD }}>✓</span></div>
-                <div style={{ color: "rgba(255,255,255,0.55)", fontFamily: MONO, fontSize: 20 }}>tx 0x77ebfcc7…</div>
-              </div>
-            )}
+          {/* grounded-on-Celopedia badge + act-on-it */}
+          <div style={{ ...useAppear(86, { rise: 8 }), display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, background: "white", padding: "10px 18px", borderRadius: 8 }}>
+              <span style={{ color: "#666", fontFamily: FONT, fontSize: 17 }}>grounded on</span>
+              <Img src={staticFile("celopedia-logo.png")} style={{ height: 24, width: "auto" }} />
+            </div>
+            <div style={{ border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.85)", fontFamily: FONT, fontSize: 20, padding: "12px 22px", clipPath: CUT(8) }}>
+              Act on it → Supply to Aave
+            </div>
           </div>
         </div>
       </div>
