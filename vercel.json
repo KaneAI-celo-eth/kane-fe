@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "bun install",
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://kane-api.157.10.160.167.nip.io/:path*" },
     { "source": "/((?!assets/|api/).*)", "destination": "/index.html" }

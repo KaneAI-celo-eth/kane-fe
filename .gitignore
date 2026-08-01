@@ -10,3 +10,6 @@ remotion/.agents/
 remotion/.agents/
 remotion/.claude/
 remotion/skills-lock.json
+
+# bun project — no npm lockfile
+package-lock.json
