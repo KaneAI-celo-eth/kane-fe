@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSetActiveWallet } from "@privy-io/wagmi";
-import { useConnection } from "wagmi";
+import { useConnection, useDisconnect } from "wagmi";
 
 /**
  * Wallet connect via Privy — one button opens the Privy modal (external wallet, email, or Google).
@@ -12,7 +12,14 @@ export function ConnectWallet() {
   const { ready, authenticated, login, logout } = usePrivy();
   const { wallets } = useWallets();
   const { setActiveWallet } = useSetActiveWallet();
+  const { mutate: disconnect } = useDisconnect();
   const { address, isConnected } = useConnection();
+
+  // Full sign-out: clear both Privy auth and the wagmi connection so the console resets.
+  const signOut = () => {
+    disconnect();
+    void logout();
+  };
 
   // Once logged in, make the primary Privy wallet the active wagmi wallet so useConnection /
   // useWriteContract / useWalletClient (used across the console) see it.
@@ -48,7 +55,7 @@ export function ConnectWallet() {
       </span>
       <button
         className="px-5 py-2.5 text-white text-sm hover:bg-white/10 btn-cut-border"
-        onClick={() => logout()}
+        onClick={signOut}
       >
         <span>Disconnect</span>
       </button>

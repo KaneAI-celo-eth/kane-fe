@@ -1,6 +1,6 @@
 import { useChainId, useConnection } from "wagmi";
 import { WagmiProvider } from "@privy-io/wagmi"; // drop-in for wagmi's — Privy manages the wallet
-import { PrivyProvider } from "@privy-io/react-auth";
+import { PrivyProvider, usePrivy } from "@privy-io/react-auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { wagmiConfig } from "../config/wagmi";
@@ -51,19 +51,26 @@ function Centered({
 }
 
 function ConsoleBody() {
-  const { address, isConnected } = useConnection();
+  const { authenticated } = usePrivy();
+  const { address } = useConnection();
   const chainId = useChainId();
   const factory = FACTORY[chainId];
   const { executor } = useExecutor(factory, address);
 
-  // 1) Not connected.
-  if (!isConnected) {
+  // 1) Not logged in. Gate on Privy's auth state (the source of truth) rather than wagmi's
+  //    isConnected, which can lag behind a disconnect and leave the chat visible.
+  if (!authenticated) {
     return (
       <Centered
         title="Connect to start"
         subtitle="Connect your wallet (top-right) to deploy your agent."
       />
     );
+  }
+
+  // 1b) Logged in, but the wallet hasn't bridged into wagmi yet.
+  if (!address) {
+    return <Centered title="Connecting…" subtitle="Finishing your wallet connection." />;
   }
 
   // 2) Wrong chain.
