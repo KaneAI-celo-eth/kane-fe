@@ -11,6 +11,7 @@ import { AAVE, EURM_CELO, UBESWAP, USDC_CELO, USDM_CELO, explorerFor } from "../
 import { UBESWAP_SWAP_SELECTOR } from "../abi/ubeswap";
 import { attributionSuffix } from "../config/attribution";
 import { standardForbiddenSelectors } from "../config/forbiddenSelectors";
+import { friendlyTxError } from "../config/errors";
 import { useExecutor } from "../hooks/useExecutor";
 
 // Demo caps: 1000 units per-tx / lifetime, window disabled (mirrors the kane-sc fork test).
@@ -108,7 +109,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
       )}
       {error && (
         <p className="text-xs text-center break-words max-w-xs" style={{ color: "#f87171" }}>
-          {error.message}
+          {friendlyTxError(error)}
         </p>
       )}
     </div>

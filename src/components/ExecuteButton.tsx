@@ -5,6 +5,7 @@ import { kaneExecutorAbi } from "../abi/kaneExecutor";
 import { explorerFor } from "../config/contracts";
 import { attributionSuffix } from "../config/attribution";
 import { buildExecute, type BuiltExecute, type ProposedAction } from "../config/agent";
+import { friendlyTxError } from "../config/errors";
 
 type Fundable = Extract<ProposedAction, { kind: "supply" | "withdraw" | "swap" }>;
 
@@ -39,7 +40,7 @@ export function ExecuteButton({
     setBuildErr(null);
     void buildExecute(action, owner)
       .then((b) => live && setBuilt(b))
-      .catch((e) => live && setBuildErr(e instanceof Error ? e.message : String(e)));
+      .catch((e) => live && setBuildErr(friendlyTxError(e)));
     return () => {
       live = false;
     };
@@ -88,8 +89,7 @@ export function ExecuteButton({
       await publicClient.waitForTransactionReceipt({ hash: execHash });
       setResult({ txHash: execHash });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setResult({ error: msg.length > 200 ? msg.slice(0, 200) + "…" : msg });
+      setResult({ error: friendlyTxError(e) });
     } finally {
       setPhase("idle");
     }
