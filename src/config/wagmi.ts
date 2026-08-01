@@ -1,5 +1,6 @@
-import { createConfig, http } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { http } from "wagmi";
+// createConfig comes from @privy-io/wagmi (drop-in for wagmi's) so Privy manages the connectors.
+import { createConfig } from "@privy-io/wagmi";
 import { celo, celoSepolia } from "./chains";
 
 // Dev override: point the Celo read transport at a local anvil fork via VITE_CELO_RPC
@@ -8,7 +9,6 @@ const celoRpc = (import.meta.env.VITE_CELO_RPC as string | undefined) || undefin
 
 export const wagmiConfig = createConfig({
   chains: [celoSepolia, celo],
-  connectors: [injected()],
   transports: {
     [celo.id]: http(celoRpc),
     [celoSepolia.id]: http(),

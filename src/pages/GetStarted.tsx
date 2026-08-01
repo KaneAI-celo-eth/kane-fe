@@ -8,11 +8,8 @@ const DOCS_URL = "https://github.com/KaneAI-celo-eth/.github";
 // Minimal EIP-1193 surface — enough to greet the owner's wallet without pulling
 // the full wagmi/viem console stack (that lands with the mainnet console).
 type Eip1193 = { request(args: { method: string; params?: unknown[] }): Promise<unknown> };
-declare global {
-  interface Window {
-    ethereum?: Eip1193;
-  }
-}
+// (No global `Window.ethereum` augmentation here — the wallet libraries declare it globally now;
+//  this unrouted page reads it via a local cast to avoid clashing with their type.)
 
 const STEPS = [
   {
@@ -36,7 +33,7 @@ export function GetStarted() {
 
   async function connect() {
     setError(null);
-    const eth = window.ethereum;
+    const eth = (window as unknown as { ethereum?: Eip1193 }).ethereum;
     if (!eth) {
       setError("No EVM wallet found — install MetaMask or a Celo-compatible wallet, then retry.");
       return;

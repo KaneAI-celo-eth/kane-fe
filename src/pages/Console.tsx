@@ -1,7 +1,10 @@
-import { WagmiProvider, useChainId, useConnection } from "wagmi";
+import { useChainId, useConnection } from "wagmi";
+import { WagmiProvider } from "@privy-io/wagmi"; // drop-in for wagmi's — Privy manages the wallet
+import { PrivyProvider } from "@privy-io/react-auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { wagmiConfig } from "../config/wagmi";
+import { privyConfig, PRIVY_APP_ID } from "../config/privy";
 import { FACTORY, explorerFor } from "../config/contracts";
 import { useExecutor } from "../hooks/useExecutor";
 import { ConnectWallet } from "../components/ConnectWallet";
@@ -119,6 +122,17 @@ function ConsoleBody() {
 }
 
 export function Console() {
+  // Privy needs an App ID. Fail soft with a clear message instead of a white screen.
+  if (!PRIVY_APP_ID) {
+    return (
+      <div className="min-h-screen w-full bg-black flex items-center justify-center p-8 font-inter">
+        <p className="text-white/60 text-sm text-center max-w-sm leading-relaxed">
+          Wallet login isn't configured yet. Set <code className="text-white/85">VITE_PRIVY_APP_ID</code>{" "}
+          (a Privy App ID from dashboard.privy.io) and rebuild.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen w-full bg-black p-3 md:p-4 font-inter">
       <div className="w-full min-h-[calc(100vh-1.5rem)] md:min-h-[calc(100vh-2rem)] rounded-2xl relative overflow-hidden bg-black flex flex-col">
@@ -133,8 +147,9 @@ export function Console() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/50 to-black/70" />
 
-        <WagmiProvider config={wagmiConfig}>
+        <PrivyProvider appId={PRIVY_APP_ID} config={privyConfig}>
           <QueryClientProvider client={queryClient}>
+            <WagmiProvider config={wagmiConfig}>
             {/* nav — wallet connect lives here, top-right */}
             <nav className="relative z-10 flex items-center justify-between gap-4 px-6 md:px-10 pt-6 md:pt-8">
               <Link to="/" className="flex items-center gap-3">
@@ -150,8 +165,9 @@ export function Console() {
             <div className="relative z-10 flex-1 w-full flex flex-col px-6 md:px-32 py-10 md:py-12">
               <ConsoleBody />
             </div>
+            </WagmiProvider>
           </QueryClientProvider>
-        </WagmiProvider>
+        </PrivyProvider>
       </div>
     </div>
   );
