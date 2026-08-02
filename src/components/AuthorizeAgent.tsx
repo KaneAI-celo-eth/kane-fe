@@ -7,7 +7,17 @@ import {
   AAVE_SUPPLY_SELECTOR,
   AAVE_WITHDRAW_SELECTOR,
 } from "../abi/aave";
-import { AAVE, EURM_CELO, UBESWAP, USDC_CELO, USDM_CELO, explorerFor } from "../config/contracts";
+import {
+  AAVE,
+  EURM_CELO,
+  MENTO,
+  MENTO_STABLES,
+  MENTO_SWAP_SELECTOR,
+  UBESWAP,
+  USDC_CELO,
+  USDM_CELO,
+  explorerFor,
+} from "../config/contracts";
 import { UBESWAP_SWAP_SELECTOR } from "../abi/ubeswap";
 import { attributionSuffix } from "../config/attribution";
 import { standardForbiddenSelectors } from "../config/forbiddenSelectors";
@@ -19,25 +29,36 @@ const CAP_6 = 1_000_000_000n; // 1000e6 (USDC / aUSDC)
 const CAP_18 = 1_000_000_000_000_000_000_000n; // 1000e18 (Mento stables)
 
 /** The full owner policy applied atomically at creation (createExecutorWithPolicy): Aave V3
- *  supply/withdraw (USDC/aUSDC, recipient-bound word 2) + Ubeswap V2 swaps of the Mento stables
- *  (USDm/EURm, swap recipient-bound word 3). */
-function buildPolicy(aavePool: Address, aUsdc: Address, ubeRouter: Address) {
+ *  supply/withdraw (USDC/aUSDC, recipient-bound word 2) + swaps on BOTH Ubeswap V2 and Mento V3
+ *  (recipient-bound word 3 on each). The Mento local-currency stables are provisioned as pull
+ *  tokens so the agent can swap FROM them (subject to Mento FX-hours / oracle breakers). */
+function buildPolicy(aavePool: Address, aUsdc: Address, ubeRouter: Address, mentoRouter: Address) {
+  const mentoTokens = Object.values(MENTO_STABLES).map((token) => ({
+    token,
+    perTxCap: CAP_18,
+    budget: CAP_18,
+    windowCap: 0n,
+    windowDuration: 0n,
+  }));
   return {
     tokens: [
       { token: USDC_CELO, perTxCap: CAP_6, budget: CAP_6, windowCap: 0n, windowDuration: 0n },
       { token: aUsdc, perTxCap: CAP_6, budget: CAP_6, windowCap: 0n, windowDuration: 0n },
       { token: USDM_CELO, perTxCap: CAP_18, budget: CAP_18, windowCap: 0n, windowDuration: 0n },
       { token: EURM_CELO, perTxCap: CAP_18, budget: CAP_18, windowCap: 0n, windowDuration: 0n },
+      ...mentoTokens,
     ],
-    targets: [aavePool, ubeRouter],
+    targets: [aavePool, ubeRouter, mentoRouter],
     selectors: [
       { target: aavePool, selector: AAVE_SUPPLY_SELECTOR, bindRecipient: true, recipientWordIndex: 2 },
       { target: aavePool, selector: AAVE_WITHDRAW_SELECTOR, bindRecipient: true, recipientWordIndex: 2 },
       // Ubeswap V2 swap: `to` is head word 3 → bind the swap output to the owner.
       { target: ubeRouter, selector: UBESWAP_SWAP_SELECTOR, bindRecipient: true, recipientWordIndex: 3 },
+      // Mento V3 swap: recipient is head word 3 too → bind the swap output to the owner.
+      { target: mentoRouter, selector: MENTO_SWAP_SELECTOR, bindRecipient: true, recipientWordIndex: 3 },
     ],
     forbiddenSelectors: standardForbiddenSelectors() as readonly Hex[],
-  } as const;
+  };
 }
 
 /** The register CTA — one signature deploys the executor AND sets its policy. Deliberately minimal:
@@ -73,14 +94,15 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
   }
 
   const ubeRouter = UBESWAP[chainId]?.router;
+  const mentoRouter = MENTO[chainId]?.router;
 
   function register() {
-    if (!aUsdc || !ubeRouter) return;
+    if (!aUsdc || !ubeRouter || !mentoRouter) return;
     writeContract({
       address: factory,
       abi: kaneExecutorFactoryAbi,
       functionName: "createExecutorWithPolicy",
-      args: [buildPolicy(aave!.pool, aUsdc, ubeRouter)],
+      args: [buildPolicy(aave!.pool, aUsdc, ubeRouter, mentoRouter)],
       dataSuffix: attributionSuffix,
     });
   }
@@ -89,7 +111,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
     <div className="flex flex-col items-center gap-3 w-full">
       <button
         className="w-full px-8 py-3.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
-        disabled={isPending || !aUsdc || !ubeRouter}
+        disabled={isPending || !aUsdc || !ubeRouter || !mentoRouter}
         onClick={register}
       >
         {isPending ? "Confirm in wallet…" : !aUsdc ? "Preparing…" : "Authorize agent"}

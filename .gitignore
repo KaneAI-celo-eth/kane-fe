@@ -13,3 +13,4 @@ remotion/skills-lock.json
 
 # bun project — no npm lockfile
 package-lock.json
+graphify-out/

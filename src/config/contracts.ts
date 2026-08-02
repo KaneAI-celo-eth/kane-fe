@@ -20,9 +20,39 @@ export function factoryAddress(chainId: number): Address | undefined {
 /** Canonical Celo mainnet USDC (6d) — the demo rebalance asset. */
 export const USDC_CELO: Address = "0xcebA9300f2b948710d2653dD7B07f33A8B32118C";
 
-/** Mento stablecoins (18d) — the deep-pool swap pair on Ubeswap V2 (per Celopedia). */
+/** Mento stablecoins (18d) — USDm/EURm swap on Ubeswap V2; the local currencies below swap on
+ *  Mento V3 (per Celopedia). */
 export const USDM_CELO: Address = "0x765DE816845861e75A25fCA122bb6898B8B1282a";
 export const EURM_CELO: Address = "0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73";
+
+/** Mento local-currency stablecoins (all 18d) — liquidity is on Mento V3, not Ubeswap. */
+export const MENTO_STABLES: Record<string, Address> = {
+  BRLm: "0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787",
+  XOFm: "0x73F93dcc49cB8A239e2032663e9475dd5ef29A08",
+  KESm: "0x456a3D042C0DbD3db53D5489e98dFb038553B0d0",
+  NGNm: "0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71",
+  COPm: "0x8A567e2aE79CA692Bd748aB832081C45de4041eA",
+  GBPm: "0xCCF663b1fF11028f0b19058d0f7B674004a40746",
+  CHFm: "0xb55a79F398E759E43C95b979163f30eC87Ee131D",
+  JPYm: "0xc45eCF20f3CD864B32D9794d6f76814aE8892e20",
+  AUDm: "0x7175504C455076F15c04A2F90a8e352281F492F9",
+  CADm: "0xff4Ab19391af240c311c54200a492233052B6325",
+  GHSm: "0xfAeA5F3404bbA20D3cc2f8C4B0A888F55a3c7313",
+  PHPm: "0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B",
+  ZARm: "0x4c35853A3B4e647fD266f4de678dCc8fEC410BF6",
+};
+
+/**
+ * Mento V3 Router — the SECOND swap venue (Celo mainnet). Its `swap(...)` selector `0x3375aa2a`
+ * puts the recipient at STATIC head word index 3, so the executor binds it to the owner exactly
+ * like Ubeswap's `to`. Verified via the Mento SDK; sourced from Celopedia.
+ */
+export const MENTO: Record<number, { router: Address } | undefined> = {
+  [celo.id]: { router: "0x4861840C2EfB2b98312B0aE34d86fD73E8f9B6f6" },
+  [celoSepolia.id]: undefined,
+};
+export const MENTO_SWAP_SELECTOR = "0x3375aa2a" as const;
+export const MENTO_RECIPIENT_WORD_INDEX = 3;
 
 /**
  * Ubeswap V2 (Uniswap-V2 fork) on Celo mainnet — the swap venue. `swapExactTokensForTokens(uint,
@@ -59,6 +89,8 @@ export const TOKENS: Record<number, TokenInfo[]> = {
     { symbol: "USDC", address: USDC_CELO, decimals: 6 },
     { symbol: "USDm", address: USDM_CELO, decimals: 18 },
     { symbol: "EURm", address: EURM_CELO, decimals: 18 },
+    // Mento local-currency stables (18d) — swap on Mento V3.
+    ...Object.entries(MENTO_STABLES).map(([symbol, address]) => ({ symbol, address, decimals: 18 })),
   ],
   [celoSepolia.id]: [],
 };
