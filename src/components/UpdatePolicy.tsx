@@ -9,6 +9,9 @@ import {
   MENTO_STABLES,
   MENTO_SWAP_SELECTOR,
   UBESWAP,
+  UNISWAP_RECIPIENT_WORD_INDEX,
+  UNISWAP_SWAP_SELECTOR,
+  UNISWAP_V3,
   explorerFor,
 } from "../config/contracts";
 import { attributionSuffix } from "../config/attribution";
@@ -37,6 +40,7 @@ function canonicalVenues(chainId: number): Venue[] {
   const out: Venue[] = [];
   const ube = UBESWAP[chainId]?.router;
   const mento = MENTO[chainId]?.router;
+  const uni = UNISWAP_V3[chainId]?.router;
   if (ube)
     out.push({
       name: "Ubeswap V2",
@@ -50,6 +54,14 @@ function canonicalVenues(chainId: number): Venue[] {
       target: mento,
       selectors: [{ selector: MENTO_SWAP_SELECTOR, word: MENTO_RECIPIENT_WORD_INDEX }],
       tokens: Object.values(MENTO_STABLES),
+    });
+  if (uni)
+    // Uniswap V3 trades the already-provisioned tokens — just the router + swap selector.
+    out.push({
+      name: "Uniswap V3",
+      target: uni,
+      selectors: [{ selector: UNISWAP_SWAP_SELECTOR, word: UNISWAP_RECIPIENT_WORD_INDEX }],
+      tokens: [],
     });
   return out;
 }

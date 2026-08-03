@@ -14,6 +14,8 @@ import {
   MENTO_STABLES,
   MENTO_SWAP_SELECTOR,
   UBESWAP,
+  UNISWAP_SWAP_SELECTOR,
+  UNISWAP_V3,
   USDC_CELO,
   USDM_CELO,
   explorerFor,
@@ -36,7 +38,13 @@ const CAP_18 = 1_000_000_000_000_000_000_000n; // 1000e18 (Mento stables)
  *  ⚠️ KEEP IN SYNC WITH `UpdatePolicy.canonicalVenues` (the existing-executor sync). A new swap
  *  venue must be added HERE (so new executors get it at registration) AND there (so existing
  *  executors are prompted to add it via the console's owner-signed Update-policy button). */
-function buildPolicy(aavePool: Address, aUsdc: Address, ubeRouter: Address, mentoRouter: Address) {
+function buildPolicy(
+  aavePool: Address,
+  aUsdc: Address,
+  ubeRouter: Address,
+  mentoRouter: Address,
+  uniswapRouter: Address,
+) {
   const mentoTokens = Object.values(MENTO_STABLES).map((token) => ({
     token,
     perTxCap: CAP_18,
@@ -52,7 +60,7 @@ function buildPolicy(aavePool: Address, aUsdc: Address, ubeRouter: Address, ment
       { token: EURM_CELO, perTxCap: CAP_18, budget: CAP_18, windowCap: 0n, windowDuration: 0n },
       ...mentoTokens,
     ],
-    targets: [aavePool, ubeRouter, mentoRouter],
+    targets: [aavePool, ubeRouter, mentoRouter, uniswapRouter],
     selectors: [
       { target: aavePool, selector: AAVE_SUPPLY_SELECTOR, bindRecipient: true, recipientWordIndex: 2 },
       { target: aavePool, selector: AAVE_WITHDRAW_SELECTOR, bindRecipient: true, recipientWordIndex: 2 },
@@ -60,6 +68,8 @@ function buildPolicy(aavePool: Address, aUsdc: Address, ubeRouter: Address, ment
       { target: ubeRouter, selector: UBESWAP_SWAP_SELECTOR, bindRecipient: true, recipientWordIndex: 3 },
       // Mento V3 swap: recipient is head word 3 too → bind the swap output to the owner.
       { target: mentoRouter, selector: MENTO_SWAP_SELECTOR, bindRecipient: true, recipientWordIndex: 3 },
+      // Uniswap V3 exactInputSingle: recipient is head word 3 (all-static struct) → bind to owner.
+      { target: uniswapRouter, selector: UNISWAP_SWAP_SELECTOR, bindRecipient: true, recipientWordIndex: 3 },
     ],
     forbiddenSelectors: standardForbiddenSelectors() as readonly Hex[],
   };
@@ -99,14 +109,15 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
 
   const ubeRouter = UBESWAP[chainId]?.router;
   const mentoRouter = MENTO[chainId]?.router;
+  const uniswapRouter = UNISWAP_V3[chainId]?.router;
 
   function register() {
-    if (!aUsdc || !ubeRouter || !mentoRouter) return;
+    if (!aUsdc || !ubeRouter || !mentoRouter || !uniswapRouter) return;
     writeContract({
       address: factory,
       abi: kaneExecutorFactoryAbi,
       functionName: "createExecutorWithPolicy",
-      args: [buildPolicy(aave!.pool, aUsdc, ubeRouter, mentoRouter)],
+      args: [buildPolicy(aave!.pool, aUsdc, ubeRouter, mentoRouter, uniswapRouter)],
       dataSuffix: attributionSuffix,
     });
   }
@@ -115,7 +126,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
     <div className="flex flex-col items-center gap-3 w-full">
       <button
         className="w-full px-8 py-3.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
-        disabled={isPending || !aUsdc || !ubeRouter || !mentoRouter}
+        disabled={isPending || !aUsdc || !ubeRouter || !mentoRouter || !uniswapRouter}
         onClick={register}
       >
         {isPending ? "Confirm in wallet…" : !aUsdc ? "Preparing…" : "Authorize agent"}

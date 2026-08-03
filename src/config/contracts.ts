@@ -55,6 +55,19 @@ export const MENTO_SWAP_SELECTOR = "0x3375aa2a" as const;
 export const MENTO_RECIPIENT_WORD_INDEX = 3;
 
 /**
+ * Uniswap V3 — the deepest DEX on Celo, always-on (no oracle/market gating). SwapRouter02's
+ * single-hop `exactInputSingle` selector `0x04e45aaf` puts the recipient at static head word 3
+ * (all-static struct, inline), so it's recipient-bound to the owner like Ubeswap/Mento. Multi-hop
+ * `exactInput` + the UniversalRouter are NOT allowlisted (dynamic calldata → unbindable).
+ */
+export const UNISWAP_V3: Record<number, { router: Address } | undefined> = {
+  [celo.id]: { router: "0x5615CDAb10dc425a742d643d949a7F474C01abc4" },
+  [celoSepolia.id]: undefined,
+};
+export const UNISWAP_SWAP_SELECTOR = "0x04e45aaf" as const;
+export const UNISWAP_RECIPIENT_WORD_INDEX = 3;
+
+/**
  * Ubeswap V2 (Uniswap-V2 fork) on Celo mainnet — the swap venue. `swapExactTokensForTokens(uint,
  * uint, address[] path, address to, uint deadline)` puts `to` at a STATIC head word (index 3), so
  * the executor binds the swap recipient to the owner. Sourced from Celopedia.
