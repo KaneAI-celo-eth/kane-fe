@@ -30,9 +30,10 @@ const CAP_18 = 1_000_000_000_000_000_000_000n; // 1000e18 — mirrors AuthorizeA
  *  selector(s), and the pull tokens it needs. Adding a future venue = append one entry here. */
 interface Venue {
   name: string;
+  /** One-line description shown in the confirm modal. */
+  desc: string;
   target: Address;
   selectors: { selector: Hex; word: number; bind?: boolean }[]; // bind defaults to true
-
   tokens: Address[];
 }
 
@@ -52,6 +53,7 @@ function canonicalVenues(chainId: number): Venue[] {
   if (ube)
     out.push({
       name: "Ubeswap V2",
+      desc: "Swap venue — Mento stablecoins & CELO pools.",
       target: ube,
       selectors: [{ selector: UBESWAP_SWAP_SELECTOR, word: 3 }],
       tokens: [],
@@ -59,6 +61,7 @@ function canonicalVenues(chainId: number): Venue[] {
   if (mento)
     out.push({
       name: "Mento V3",
+      desc: "Swap venue — the local-currency stables (NGNm, COPm, BRLm, …).",
       target: mento,
       selectors: [{ selector: MENTO_SWAP_SELECTOR, word: MENTO_RECIPIENT_WORD_INDEX }],
       tokens: Object.values(MENTO_STABLES),
@@ -67,6 +70,7 @@ function canonicalVenues(chainId: number): Venue[] {
     // Uniswap V3 trades the already-provisioned tokens — just the router + swap selector.
     out.push({
       name: "Uniswap V3",
+      desc: "Swap venue — the deepest DEX on Celo, always-on.",
       target: uni,
       selectors: [{ selector: UNISWAP_SWAP_SELECTOR, word: UNISWAP_RECIPIENT_WORD_INDEX }],
       tokens: [],
@@ -77,6 +81,7 @@ function canonicalVenues(chainId: number): Venue[] {
     // + the mTokens (USDm/EURm/BRLm assets are already provisioned via the Mento set).
     out.push({
       name: "Moola Market",
+      desc: "Lending — supply/withdraw USDm, EURm, CELO, BRLm.",
       target: moola,
       selectors: [
         { selector: MOOLA_DEPOSIT_SELECTOR, word: 2 },
@@ -90,6 +95,7 @@ function canonicalVenues(chainId: number): Venue[] {
     // stCELO is swept to the owner. Provision CELO (funds the native deposit) + stCELO.
     out.push({
       name: "stCELO staking",
+      desc: "Liquid staking — stake CELO, receive stCELO.",
       target: stcelo,
       selectors: [{ selector: STCELO_DEPOSIT_SELECTOR, word: 0, bind: false }],
       tokens: [...STCELO_TOKENS],
@@ -116,6 +122,7 @@ export function UpdatePolicy({ executor }: { executor: Address }) {
   const [signing, setSigning] = useState(false);
   const [hash, setHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   // Batch-read which venue targets are already allowlisted on this executor.
   const { data: allowed, refetch } = useReadContracts({
@@ -177,23 +184,22 @@ export function UpdatePolicy({ executor }: { executor: Address }) {
     }
   }
 
-  const names = missing.map((m) => m.name).join(" + ");
+  const count = missing.length;
   return (
     <div className="flex flex-col gap-2 border border-white/12 btn-cut-sm px-4 py-3 bg-black/40 backdrop-blur-md">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <p className="text-white/80 text-sm">Update executor policy</p>
           <p className="text-white/45 text-xs mt-0.5 max-w-xl leading-relaxed">
-            Your executor is missing {names}. One signature adds {missing.length > 1 ? "these venues" : "this venue"}{" "}
-            (routers + local stablecoins, swap output bound to you). New executors already include everything.
+            {count} new {count > 1 ? "venues are" : "venue is"} available for your executor. One
+            signature adds {count > 1 ? "them" : "it"}. New executors already include everything.
           </p>
         </div>
         <button
-          onClick={sync}
-          disabled={signing}
-          className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut shrink-0"
+          onClick={() => setOpen(true)}
+          className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors btn-cut shrink-0"
         >
-          {signing ? "Confirm in wallet…" : `Add ${names}`}
+          Update policy
         </button>
       </div>
       {hash && (
@@ -209,10 +215,61 @@ export function UpdatePolicy({ executor }: { executor: Address }) {
           </a>
         </p>
       )}
-      {error && (
-        <p className="text-xs break-words" style={{ color: "#f87171" }}>
-          {error}
-        </p>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 anim-fade"
+          onClick={() => !signing && setOpen(false)}
+        >
+          <div
+            className="w-full max-w-md border border-white/15 btn-cut-sm bg-black p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-white/45 text-[11px] tracking-[0.18em] uppercase mb-2">Update executor policy</p>
+            <p className="text-white text-lg font-normal">
+              Add {count} new {count > 1 ? "venues" : "venue"}
+            </p>
+            <p className="text-white/50 text-xs mt-1 leading-relaxed">
+              One owner signature allowlists these on your executor (routers/pools + their tokens; swap
+              output stays bound to you). You keep custody — revoke anytime.
+            </p>
+
+            <ul className="mt-4 flex flex-col gap-2.5">
+              {missing.map((m) => (
+                <li key={m.name} className="flex gap-3">
+                  <span className="text-white/30 mt-0.5">+</span>
+                  <div>
+                    <p className="text-white text-sm">{m.name}</p>
+                    <p className="text-white/45 text-xs">{m.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {error && (
+              <p className="text-xs break-words mt-3" style={{ color: "#f87171" }}>
+                {error}
+              </p>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setOpen(false)}
+                disabled={signing}
+                className="px-4 py-2 text-white/70 text-sm hover:text-white disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={sync}
+                disabled={signing}
+                className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
+              >
+                {signing ? "Confirm in wallet…" : "Sign & update"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
