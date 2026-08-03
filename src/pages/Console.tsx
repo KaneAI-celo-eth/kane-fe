@@ -11,6 +11,7 @@ import { ConnectWallet } from "../components/ConnectWallet";
 import { AuthorizeAgent } from "../components/AuthorizeAgent";
 import { PolicyCard } from "../components/PolicyCard";
 import { AgentPanel } from "../components/AgentPanel";
+import { UpdatePolicy } from "../components/UpdatePolicy";
 import { KaneMark } from "../components/KaneMark";
 
 const queryClient = new QueryClient();
@@ -114,6 +115,9 @@ function ConsoleBody() {
       </div>
 
       <div className="mt-4 flex flex-col gap-4">
+        {/* Owner-signed policy sync — visible only when the executor is missing a canonical venue. */}
+        <UpdatePolicy executor={executor} />
+
         <Card label="Agent · the model advises">
           <AgentPanel executor={executor} />
         </Card>
