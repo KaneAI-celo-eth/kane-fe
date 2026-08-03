@@ -8,6 +8,10 @@ import {
   MENTO_RECIPIENT_WORD_INDEX,
   MENTO_STABLES,
   MENTO_SWAP_SELECTOR,
+  MOOLA,
+  MOOLA_DEPOSIT_SELECTOR,
+  MOOLA_TOKENS,
+  MOOLA_WITHDRAW_SELECTOR,
   UBESWAP,
   UNISWAP_RECIPIENT_WORD_INDEX,
   UNISWAP_SWAP_SELECTOR,
@@ -62,6 +66,19 @@ function canonicalVenues(chainId: number): Venue[] {
       target: uni,
       selectors: [{ selector: UNISWAP_SWAP_SELECTOR, word: UNISWAP_RECIPIENT_WORD_INDEX }],
       tokens: [],
+    });
+  const moola = MOOLA[chainId]?.pool;
+  if (moola)
+    // Moola Market (lending): deposit + withdraw both bind the recipient at word 2. Provision CELO
+    // + the mTokens (USDm/EURm/BRLm assets are already provisioned via the Mento set).
+    out.push({
+      name: "Moola Market",
+      target: moola,
+      selectors: [
+        { selector: MOOLA_DEPOSIT_SELECTOR, word: 2 },
+        { selector: MOOLA_WITHDRAW_SELECTOR, word: 2 },
+      ],
+      tokens: [...MOOLA_TOKENS],
     });
   return out;
 }

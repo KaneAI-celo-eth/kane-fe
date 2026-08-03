@@ -13,6 +13,10 @@ import {
   MENTO,
   MENTO_STABLES,
   MENTO_SWAP_SELECTOR,
+  MOOLA,
+  MOOLA_DEPOSIT_SELECTOR,
+  MOOLA_TOKENS,
+  MOOLA_WITHDRAW_SELECTOR,
   UBESWAP,
   UNISWAP_SWAP_SELECTOR,
   UNISWAP_V3,
@@ -44,14 +48,11 @@ function buildPolicy(
   ubeRouter: Address,
   mentoRouter: Address,
   uniswapRouter: Address,
+  moolaPool: Address,
 ) {
-  const mentoTokens = Object.values(MENTO_STABLES).map((token) => ({
-    token,
-    perTxCap: CAP_18,
-    budget: CAP_18,
-    windowCap: 0n,
-    windowDuration: 0n,
-  }));
+  const cap18 = (token: Address) => ({ token, perTxCap: CAP_18, budget: CAP_18, windowCap: 0n, windowDuration: 0n });
+  const mentoTokens = Object.values(MENTO_STABLES).map(cap18);
+  const moolaTokens = MOOLA_TOKENS.map(cap18); // CELO + mTokens (18d)
   return {
     tokens: [
       { token: USDC_CELO, perTxCap: CAP_6, budget: CAP_6, windowCap: 0n, windowDuration: 0n },
@@ -59,8 +60,9 @@ function buildPolicy(
       { token: USDM_CELO, perTxCap: CAP_18, budget: CAP_18, windowCap: 0n, windowDuration: 0n },
       { token: EURM_CELO, perTxCap: CAP_18, budget: CAP_18, windowCap: 0n, windowDuration: 0n },
       ...mentoTokens,
+      ...moolaTokens,
     ],
-    targets: [aavePool, ubeRouter, mentoRouter, uniswapRouter],
+    targets: [aavePool, ubeRouter, mentoRouter, uniswapRouter, moolaPool],
     selectors: [
       { target: aavePool, selector: AAVE_SUPPLY_SELECTOR, bindRecipient: true, recipientWordIndex: 2 },
       { target: aavePool, selector: AAVE_WITHDRAW_SELECTOR, bindRecipient: true, recipientWordIndex: 2 },
@@ -70,6 +72,9 @@ function buildPolicy(
       { target: mentoRouter, selector: MENTO_SWAP_SELECTOR, bindRecipient: true, recipientWordIndex: 3 },
       // Uniswap V3 exactInputSingle: recipient is head word 3 (all-static struct) → bind to owner.
       { target: uniswapRouter, selector: UNISWAP_SWAP_SELECTOR, bindRecipient: true, recipientWordIndex: 3 },
+      // Moola Market (Aave V2 fork): deposit/withdraw bind the recipient at head word 2.
+      { target: moolaPool, selector: MOOLA_DEPOSIT_SELECTOR, bindRecipient: true, recipientWordIndex: 2 },
+      { target: moolaPool, selector: MOOLA_WITHDRAW_SELECTOR, bindRecipient: true, recipientWordIndex: 2 },
     ],
     forbiddenSelectors: standardForbiddenSelectors() as readonly Hex[],
   };
@@ -110,14 +115,15 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
   const ubeRouter = UBESWAP[chainId]?.router;
   const mentoRouter = MENTO[chainId]?.router;
   const uniswapRouter = UNISWAP_V3[chainId]?.router;
+  const moolaPool = MOOLA[chainId]?.pool;
 
   function register() {
-    if (!aUsdc || !ubeRouter || !mentoRouter || !uniswapRouter) return;
+    if (!aUsdc || !ubeRouter || !mentoRouter || !uniswapRouter || !moolaPool) return;
     writeContract({
       address: factory,
       abi: kaneExecutorFactoryAbi,
       functionName: "createExecutorWithPolicy",
-      args: [buildPolicy(aave!.pool, aUsdc, ubeRouter, mentoRouter, uniswapRouter)],
+      args: [buildPolicy(aave!.pool, aUsdc, ubeRouter, mentoRouter, uniswapRouter, moolaPool)],
       dataSuffix: attributionSuffix,
     });
   }
@@ -126,7 +132,7 @@ export function AuthorizeAgent({ factory }: { factory: Address }) {
     <div className="flex flex-col items-center gap-3 w-full">
       <button
         className="w-full px-8 py-3.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
-        disabled={isPending || !aUsdc || !ubeRouter || !mentoRouter || !uniswapRouter}
+        disabled={isPending || !aUsdc || !ubeRouter || !mentoRouter || !uniswapRouter || !moolaPool}
         onClick={register}
       >
         {isPending ? "Confirm in wallet…" : !aUsdc ? "Preparing…" : "Authorize agent"}

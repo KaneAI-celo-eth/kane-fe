@@ -90,6 +90,27 @@ export const AAVE: Record<number, { pool: Address; dataProvider: Address } | und
   [celoSepolia.id]: undefined,
 };
 
+/**
+ * Moola Market — a 2nd lending venue (Aave V2 fork; lends CELO/USDm/EURm/BRLm). `deposit`/`withdraw`
+ * bind the recipient (onBehalfOf/to) to the owner at head word 2, like Aave — no contract change.
+ * (`withdraw` shares Aave's selector `0x69328dec`; `deposit` is `0xe8eda9df`.) Verified on-chain.
+ */
+export const MOOLA: Record<number, { pool: Address } | undefined> = {
+  [celo.id]: { pool: "0x970b12522CA9b4054807a2c5B736149a5BE6f670" },
+  [celoSepolia.id]: undefined,
+};
+export const MOOLA_DEPOSIT_SELECTOR = "0xe8eda9df" as const;
+export const MOOLA_WITHDRAW_SELECTOR = "0x69328dec" as const;
+/** Moola pull tokens beyond the already-provisioned Mento stables: CELO + the mTokens (pulled on
+ *  withdraw). USDm/EURm/BRLm assets are already provisioned via the Mento set. Verified 2026-08-03. */
+export const MOOLA_TOKENS: readonly Address[] = [
+  "0x471EcE3750Da237f93B8E339c536989b8978a438", // CELO (asset)
+  "0x918146359264C492BD6934071c6Bd31C854EDBc3", // mUSDm
+  "0xE273Ad7ee11dCfAA87383aD5977EE1504aC07568", // mEURm
+  "0x7D00cd74FF385c955EA3d79e47BF06bD7386387D", // mCELO
+  "0x9802d866fdE4563d088a6619F7CeF82C0B991A55", // mBRLm
+];
+
 export interface TokenInfo {
   symbol: string;
   address: Address;
