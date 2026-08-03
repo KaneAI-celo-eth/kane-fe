@@ -223,56 +223,68 @@ export function UpdatePolicy({ executor }: { executor: Address }) {
           containing block (a `fixed` child of a backdrop-blurred ancestor is clipped to that ancestor). */}
       {open &&
         createPortal(
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 font-inter anim-fade"
-            onClick={() => !signing && setOpen(false)}
-          >
-            <div
-              className="w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/15 btn-cut-sm bg-black p-6 md:p-8"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <p className="text-white/45 text-[11px] tracking-[0.18em] uppercase mb-2">Update executor policy</p>
-              <p className="text-white text-2xl font-normal tracking-[-0.02em]">
-                Add {count} new {count > 1 ? "venues" : "venue"}
-              </p>
-              <p className="text-white/50 text-sm mt-2 leading-relaxed">
-                One owner signature allowlists these on your executor (routers/pools + their tokens; swap
-                output stays bound to you). You keep custody — revoke anytime.
-              </p>
+          <div className="fixed inset-0 z-[100] bg-black font-inter anim-fade flex flex-col overflow-y-auto">
+            {/* top bar */}
+            <div className="flex items-center justify-between px-6 md:px-12 py-6 shrink-0">
+              <span className="text-white/60 text-[10px] md:text-xs tracking-[0.4em] font-light">
+                K A N E A I
+              </span>
+              <button
+                onClick={() => !signing && setOpen(false)}
+                disabled={signing}
+                aria-label="Close"
+                className="text-white/50 hover:text-white text-2xl leading-none disabled:opacity-40"
+              >
+                ✕
+              </button>
+            </div>
 
-              <ul className="mt-6 flex flex-col gap-4">
-                {missing.map((m) => (
-                  <li key={m.name} className="flex gap-3">
-                    <span className="text-white/30 mt-0.5">+</span>
-                    <div>
-                      <p className="text-white text-base">{m.name}</p>
-                      <p className="text-white/45 text-sm">{m.desc}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-
-              {error && (
-                <p className="text-sm break-words mt-4" style={{ color: "#f87171" }}>
-                  {error}
+            {/* centered content */}
+            <div className="flex-1 flex items-center justify-center px-6 py-8">
+              <div className="w-full max-w-xl">
+                <p className="text-white/45 text-[11px] tracking-[0.18em] uppercase mb-3">Update executor policy</p>
+                <h1 className="text-white text-4xl md:text-5xl font-normal tracking-[-0.03em]">
+                  Add {count} new {count > 1 ? "venues" : "venue"}
+                </h1>
+                <p className="text-white/55 text-sm md:text-base mt-4 leading-relaxed max-w-lg">
+                  One owner signature allowlists these on your executor (routers/pools + their tokens;
+                  swap output stays bound to you). You keep custody — revoke anytime.
                 </p>
-              )}
 
-              <div className="mt-8 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => setOpen(false)}
-                  disabled={signing}
-                  className="px-5 py-2.5 text-white/70 text-sm hover:text-white disabled:opacity-40"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={sync}
-                  disabled={signing}
-                  className="px-6 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
-                >
-                  {signing ? "Confirm in wallet…" : "Sign & update"}
-                </button>
+                <ul className="mt-10 flex flex-col divide-y divide-white/10 border-y border-white/10">
+                  {missing.map((m) => (
+                    <li key={m.name} className="flex items-start gap-4 py-4">
+                      <span className="text-white/25 text-lg leading-none mt-0.5">+</span>
+                      <div>
+                        <p className="text-white text-base md:text-lg">{m.name}</p>
+                        <p className="text-white/45 text-sm mt-0.5">{m.desc}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                {error && (
+                  <p className="text-sm break-words mt-5" style={{ color: "#f87171" }}>
+                    {error}
+                  </p>
+                )}
+
+                <div className="mt-10 flex items-center gap-4">
+                  <button
+                    onClick={sync}
+                    disabled={signing}
+                    className="px-8 py-3.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
+                  >
+                    {signing ? "Confirm in wallet…" : "Sign & update"}
+                  </button>
+                  <button
+                    onClick={() => setOpen(false)}
+                    disabled={signing}
+                    className="px-5 py-3.5 text-white/60 text-sm hover:text-white disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>,
