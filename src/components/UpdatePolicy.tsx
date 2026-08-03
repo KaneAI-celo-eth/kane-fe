@@ -27,7 +27,12 @@ interface Venue {
 
 /** The canonical venues an executor should allowlist. Aave (supply/withdraw) is set atomically at
  *  registration and its aToken is resolved on-chain, so it's not part of this additive sync — this
- *  covers the swap venues, which is where new venues get added over time. */
+ *  covers the swap venues, which is where new venues get added over time.
+ *
+ *  ⚠️ KEEP IN SYNC WITH `AuthorizeAgent.buildPolicy` (the register-time policy). Adding a new venue
+ *  means editing BOTH: `buildPolicy` so NEW executors get it at registration (they then never see
+ *  the Update-policy banner), and here so EXISTING executors are prompted to add it. Update only
+ *  this one and new users would see the banner immediately after registering. */
 function canonicalVenues(chainId: number): Venue[] {
   const out: Venue[] = [];
   const ube = UBESWAP[chainId]?.router;

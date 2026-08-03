@@ -31,7 +31,11 @@ const CAP_18 = 1_000_000_000_000_000_000_000n; // 1000e18 (Mento stables)
 /** The full owner policy applied atomically at creation (createExecutorWithPolicy): Aave V3
  *  supply/withdraw (USDC/aUSDC, recipient-bound word 2) + swaps on BOTH Ubeswap V2 and Mento V3
  *  (recipient-bound word 3 on each). The Mento local-currency stables are provisioned as pull
- *  tokens so the agent can swap FROM them (subject to Mento FX-hours / oracle breakers). */
+ *  tokens so the agent can swap FROM them (subject to Mento FX-hours / oracle breakers).
+ *
+ *  ⚠️ KEEP IN SYNC WITH `UpdatePolicy.canonicalVenues` (the existing-executor sync). A new swap
+ *  venue must be added HERE (so new executors get it at registration) AND there (so existing
+ *  executors are prompted to add it via the console's owner-signed Update-policy button). */
 function buildPolicy(aavePool: Address, aUsdc: Address, ubeRouter: Address, mentoRouter: Address) {
   const mentoTokens = Object.values(MENTO_STABLES).map((token) => ({
     token,
