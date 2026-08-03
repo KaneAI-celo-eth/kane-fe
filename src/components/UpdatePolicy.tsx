@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useChainId, usePublicClient, useReadContracts, useWriteContract } from "wagmi";
 import { encodeFunctionData, type Address, type Hex } from "viem";
 import { kaneExecutorAbi } from "../abi/kaneExecutor";
@@ -186,91 +187,97 @@ export function UpdatePolicy({ executor }: { executor: Address }) {
 
   const count = missing.length;
   return (
-    <div className="flex flex-col gap-2 border border-white/12 btn-cut-sm px-4 py-3 bg-black/40 backdrop-blur-md">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="min-w-0">
-          <p className="text-white/80 text-sm">Update executor policy</p>
-          <p className="text-white/45 text-xs mt-0.5 max-w-xl leading-relaxed">
-            {count} new {count > 1 ? "venues are" : "venue is"} available for your executor. One
-            signature adds {count > 1 ? "them" : "it"}. New executors already include everything.
-          </p>
-        </div>
-        <button
-          onClick={() => setOpen(true)}
-          className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors btn-cut shrink-0"
-        >
-          Update policy
-        </button>
-      </div>
-      {hash && (
-        <p className="text-white/45 text-xs">
-          tx:{" "}
-          <a
-            href={`${explorerFor(chainId)}/tx/${hash}`}
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-white/60 underline underline-offset-4 hover:text-white"
-          >
-            {hash.slice(0, 10)}…
-          </a>
-        </p>
-      )}
-
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 anim-fade"
-          onClick={() => !signing && setOpen(false)}
-        >
-          <div
-            className="w-full max-w-md border border-white/15 btn-cut-sm bg-black p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-white/45 text-[11px] tracking-[0.18em] uppercase mb-2">Update executor policy</p>
-            <p className="text-white text-lg font-normal">
-              Add {count} new {count > 1 ? "venues" : "venue"}
+    <>
+      <div className="flex flex-col gap-2 border border-white/12 btn-cut-sm px-4 py-3 bg-black/40 backdrop-blur-md">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <p className="text-white/80 text-sm">Update executor policy</p>
+            <p className="text-white/45 text-xs mt-0.5 max-w-xl leading-relaxed">
+              {count} new {count > 1 ? "venues are" : "venue is"} available for your executor. One
+              signature adds {count > 1 ? "them" : "it"}. New executors already include everything.
             </p>
-            <p className="text-white/50 text-xs mt-1 leading-relaxed">
-              One owner signature allowlists these on your executor (routers/pools + their tokens; swap
-              output stays bound to you). You keep custody — revoke anytime.
-            </p>
-
-            <ul className="mt-4 flex flex-col gap-2.5">
-              {missing.map((m) => (
-                <li key={m.name} className="flex gap-3">
-                  <span className="text-white/30 mt-0.5">+</span>
-                  <div>
-                    <p className="text-white text-sm">{m.name}</p>
-                    <p className="text-white/45 text-xs">{m.desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            {error && (
-              <p className="text-xs break-words mt-3" style={{ color: "#f87171" }}>
-                {error}
-              </p>
-            )}
-
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button
-                onClick={() => setOpen(false)}
-                disabled={signing}
-                className="px-4 py-2 text-white/70 text-sm hover:text-white disabled:opacity-40"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={sync}
-                disabled={signing}
-                className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
-              >
-                {signing ? "Confirm in wallet…" : "Sign & update"}
-              </button>
-            </div>
           </div>
+          <button
+            onClick={() => setOpen(true)}
+            className="px-5 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors btn-cut shrink-0"
+          >
+            Update policy
+          </button>
         </div>
-      )}
-    </div>
+        {hash && (
+          <p className="text-white/45 text-xs">
+            tx:{" "}
+            <a
+              href={`${explorerFor(chainId)}/tx/${hash}`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-white/60 underline underline-offset-4 hover:text-white"
+            >
+              {hash.slice(0, 10)}…
+            </a>
+          </p>
+        )}
+      </div>
+
+      {/* Full-screen confirm modal — portaled to <body> so it escapes the console's backdrop-filter
+          containing block (a `fixed` child of a backdrop-blurred ancestor is clipped to that ancestor). */}
+      {open &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 font-inter anim-fade"
+            onClick={() => !signing && setOpen(false)}
+          >
+            <div
+              className="w-full max-w-lg max-h-[90vh] overflow-y-auto border border-white/15 btn-cut-sm bg-black p-6 md:p-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-white/45 text-[11px] tracking-[0.18em] uppercase mb-2">Update executor policy</p>
+              <p className="text-white text-2xl font-normal tracking-[-0.02em]">
+                Add {count} new {count > 1 ? "venues" : "venue"}
+              </p>
+              <p className="text-white/50 text-sm mt-2 leading-relaxed">
+                One owner signature allowlists these on your executor (routers/pools + their tokens; swap
+                output stays bound to you). You keep custody — revoke anytime.
+              </p>
+
+              <ul className="mt-6 flex flex-col gap-4">
+                {missing.map((m) => (
+                  <li key={m.name} className="flex gap-3">
+                    <span className="text-white/30 mt-0.5">+</span>
+                    <div>
+                      <p className="text-white text-base">{m.name}</p>
+                      <p className="text-white/45 text-sm">{m.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {error && (
+                <p className="text-sm break-words mt-4" style={{ color: "#f87171" }}>
+                  {error}
+                </p>
+              )}
+
+              <div className="mt-8 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setOpen(false)}
+                  disabled={signing}
+                  className="px-5 py-2.5 text-white/70 text-sm hover:text-white disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sync}
+                  disabled={signing}
+                  className="px-6 py-2.5 bg-white text-black text-sm font-medium hover:bg-white/90 transition-colors disabled:opacity-40 btn-cut"
+                >
+                  {signing ? "Confirm in wallet…" : "Sign & update"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
