@@ -28,4 +28,6 @@ export const kaneExecutorAbi = parseAbi([
   "function multicall(bytes[] data) returns (bytes[] results)",
   // ---- agent-signed atomic action (driven by kane-be; declared for completeness) ----
   "function execute((address token, uint256 amount)[] pulls, (address token, address spender, uint256 amount)[] approvals, (address target, uint256 value, bytes data)[] calls, uint32 expectedVersion)",
+  // 5-arg overload with explicit sweepTokens (used for stake — stCELO deposit output is swept, not recipient-bound).
+  "function execute((address token, uint256 amount)[] pulls, (address token, address spender, uint256 amount)[] approvals, (address target, uint256 value, bytes data)[] calls, address[] sweepTokens, uint32 expectedVersion)",
 ]);

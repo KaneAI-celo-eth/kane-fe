@@ -12,6 +12,7 @@ export type ProposedAction =
   | { kind: "answer"; text: string }
   | { kind: "supply"; amount: string }
   | { kind: "withdraw"; amount: string }
+  | { kind: "stake"; amount: string }
   | { kind: "swap"; from: string; to: string; amount: string }
   | { kind: "noop"; reason: string };
 
@@ -55,6 +56,8 @@ export type BuiltExecute = {
   pulls: { token: `0x${string}`; amount: bigint }[];
   approvals: { token: `0x${string}`; spender: `0x${string}`; amount: bigint }[];
   calls: { target: `0x${string}`; value: bigint; data: `0x${string}` }[];
+  /** Extra output tokens to sweep to the owner (present for stake — the 5-arg execute). */
+  sweepTokens?: `0x${string}`[];
   quote?: { from: string; to: string; amountOutHuman: string; hops: number };
 };
 
@@ -80,6 +83,7 @@ export async function buildExecute(
     pulls: (b.pulls as { token: `0x${string}`; amount: string }[]).map((p) => ({ token: p.token, amount: BigInt(p.amount) })),
     approvals: (b.approvals as { token: `0x${string}`; spender: `0x${string}`; amount: string }[]).map((a) => ({ token: a.token, spender: a.spender, amount: BigInt(a.amount) })),
     calls: (b.calls as { target: `0x${string}`; value: string; data: `0x${string}` }[]).map((cl) => ({ target: cl.target, value: BigInt(cl.value), data: cl.data })),
+    sweepTokens: b.sweepTokens as `0x${string}`[] | undefined,
     quote: b.quote as BuiltExecute["quote"],
   };
 }

@@ -111,6 +111,22 @@ export const MOOLA_TOKENS: readonly Address[] = [
   "0x9802d866fdE4563d088a6619F7CeF82C0B991A55", // mBRLm
 ];
 
+/**
+ * stCELO liquid staking. The Manager's `deposit()` (selector `0xd0e30db0`, payable, no args) mints
+ * stCELO to msg.sender (the executor) — so it's allowlisted with `bindRecipient=FALSE`, and the
+ * minted stCELO is swept to the owner (sweepTokens). CELO is pulled to fund the native `msg.value`
+ * (CELO's dual native/ERC20 nature). Verified on-chain 2026-08-03.
+ */
+export const STCELO: Record<number, { manager: Address } | undefined> = {
+  [celo.id]: { manager: "0x0239b96D10a434a56CC9E09383077A0490cF9398" },
+  [celoSepolia.id]: undefined,
+};
+export const STCELO_DEPOSIT_SELECTOR = "0xd0e30db0" as const;
+export const STCELO_TOKENS: readonly Address[] = [
+  "0x471EcE3750Da237f93B8E339c536989b8978a438", // CELO (pulled to fund deposit{value})
+  "0xC668583dcbDc9ae6FA3CE46462758188adfdfC24", // stCELO (minted → swept to owner)
+];
+
 export interface TokenInfo {
   symbol: string;
   address: Address;

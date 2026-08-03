@@ -12,6 +12,9 @@ import {
   MOOLA_DEPOSIT_SELECTOR,
   MOOLA_TOKENS,
   MOOLA_WITHDRAW_SELECTOR,
+  STCELO,
+  STCELO_DEPOSIT_SELECTOR,
+  STCELO_TOKENS,
   UBESWAP,
   UNISWAP_RECIPIENT_WORD_INDEX,
   UNISWAP_SWAP_SELECTOR,
@@ -28,7 +31,8 @@ const CAP_18 = 1_000_000_000_000_000_000_000n; // 1000e18 — mirrors AuthorizeA
 interface Venue {
   name: string;
   target: Address;
-  selectors: { selector: Hex; word: number }[];
+  selectors: { selector: Hex; word: number; bind?: boolean }[]; // bind defaults to true
+
   tokens: Address[];
 }
 
@@ -80,6 +84,16 @@ function canonicalVenues(chainId: number): Venue[] {
       ],
       tokens: [...MOOLA_TOKENS],
     });
+  const stcelo = STCELO[chainId]?.manager;
+  if (stcelo)
+    // stCELO staking: deposit() mints to msg.sender (NOT recipient-bound) → bind:false; the minted
+    // stCELO is swept to the owner. Provision CELO (funds the native deposit) + stCELO.
+    out.push({
+      name: "stCELO staking",
+      target: stcelo,
+      selectors: [{ selector: STCELO_DEPOSIT_SELECTOR, word: 0, bind: false }],
+      tokens: [...STCELO_TOKENS],
+    });
   return out;
 }
 
@@ -130,7 +144,7 @@ export function UpdatePolicy({ executor }: { executor: Address }) {
           encodeFunctionData({
             abi: kaneExecutorAbi,
             functionName: "setAllowedSelector",
-            args: [v.target, s.selector, true, true, s.word],
+            args: [v.target, s.selector, true, s.bind ?? true, s.word],
           }),
         );
       }

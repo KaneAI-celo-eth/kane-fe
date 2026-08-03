@@ -7,7 +7,7 @@ import { attributionSuffix } from "../config/attribution";
 import { buildExecute, type BuiltExecute, type ProposedAction } from "../config/agent";
 import { friendlyTxError } from "../config/errors";
 
-type Fundable = Extract<ProposedAction, { kind: "supply" | "withdraw" | "swap" }>;
+type Fundable = Extract<ProposedAction, { kind: "supply" | "withdraw" | "swap" | "stake" }>;
 
 /**
  * MANUAL execution — the OWNER drives their own executor (two owner signatures: approve the exact
@@ -48,7 +48,8 @@ export function ExecuteButton({
 
   const token = built?.inputToken;
   const amount = built?.inputAmount;
-  const decimals = built?.inputToken === undefined ? 6 : action.kind === "swap" ? 18 : 6;
+  const decimals =
+    built?.inputToken === undefined ? 6 : action.kind === "swap" || action.kind === "stake" ? 18 : 6;
 
   const { data: balance } = useReadContract({
     address: token,
@@ -60,7 +61,13 @@ export function ExecuteButton({
   const insufficient = balance !== undefined && amount !== undefined && balance < amount;
   const fmt = (v: bigint) => (Number(v) / 10 ** decimals).toLocaleString(undefined, { maximumFractionDigits: 4 });
   const tokenLabel =
-    action.kind === "supply" ? "USDC" : action.kind === "withdraw" ? "aUSDC" : action.from;
+    action.kind === "supply"
+      ? "USDC"
+      : action.kind === "withdraw"
+        ? "aUSDC"
+        : action.kind === "stake"
+          ? "CELO"
+          : action.from;
 
   async function run() {
     if (!built || !token || amount === undefined || !publicClient) return;
@@ -77,13 +84,17 @@ export function ExecuteButton({
       });
       await publicClient.waitForTransactionReceipt({ hash: approveHash });
 
-      // 2) owner calls execute() on their OWN executor with the server-built payload (MetaMask)
+      // 2) owner calls execute() on their OWN executor with the server-built payload (MetaMask).
+      //    Use the 5-arg overload (with sweepTokens) when the payload has them (stake); otherwise the
+      //    4-arg form (swaps/lending, whose output is recipient-bound) — unchanged.
       setPhase("executing");
       const execHash = await writeContractAsync({
         address: executor,
         abi: kaneExecutorAbi,
         functionName: "execute",
-        args: [built.pulls, built.approvals, built.calls, built.version],
+        args: built.sweepTokens?.length
+          ? [built.pulls, built.approvals, built.calls, built.sweepTokens, built.version]
+          : [built.pulls, built.approvals, built.calls, built.version],
         dataSuffix: attributionSuffix,
       });
       await publicClient.waitForTransactionReceipt({ hash: execHash });

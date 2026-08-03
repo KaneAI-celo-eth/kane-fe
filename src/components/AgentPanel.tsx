@@ -17,6 +17,10 @@ function usdc(amount: string): string {
   return `${Number(amount) / 1e6} USDC`;
 }
 
+function celo(amount: string): string {
+  return `${Number(amount) / 1e18} CELO`;
+}
+
 /** Short natural-language recap of an agent turn — the assistant side of the chat history. */
 function summarize(r: IntentResult): string {
   const a = r.action;
@@ -26,6 +30,7 @@ function summarize(r: IntentResult): string {
       ? `Proposed swap ${a.amount} ${r.quote.from} → ~${r.quote.amountOutHuman} ${r.quote.to} on Ubeswap V2.`
       : `Swap ${a.amount} ${a.from}→${a.to} not routable: ${r.error ?? "thin pool"}.`;
   if (a.kind === "supply" || a.kind === "withdraw") return `Proposed ${a.kind} ${usdc(a.amount)} on Aave V3.`;
+  if (a.kind === "stake") return `Proposed stake ${celo(a.amount)} into stCELO.`;
   return `No action: ${a.reason}`;
 }
 
@@ -399,8 +404,9 @@ function Proposal({
       <div className="border border-white/25 btn-cut-sm p-4 md:p-5">
         <p className="text-white/40 text-[11px] tracking-[0.18em] uppercase mb-2">Proposed move</p>
         <p className="text-white text-xl md:text-2xl font-normal tracking-[-0.01em]">
-          {a.kind === "supply" ? "Supply" : "Withdraw"} {usdc(a.amount)}{" "}
-          <span className="text-white/45 text-base">→ Aave V3</span>
+          {a.kind === "supply" ? "Supply" : a.kind === "withdraw" ? "Withdraw" : "Stake"}{" "}
+          {a.kind === "stake" ? celo(a.amount) : usdc(a.amount)}{" "}
+          <span className="text-white/45 text-base">→ {a.kind === "stake" ? "stCELO" : "Aave V3 / Moola"}</span>
         </p>
         <p className="text-white/35 text-xs mt-2">
           No address — the runtime resolves it, and the position is bound to your wallet.
@@ -409,7 +415,7 @@ function Proposal({
           <InlineVerdict result={result} />
         </div>
       </div>
-      {executor && owner && (a.kind === "supply" || a.kind === "withdraw") && (
+      {executor && owner && (a.kind === "supply" || a.kind === "withdraw" || a.kind === "stake") && (
         <ExecuteButton action={a} executor={executor} owner={owner} />
       )}
     </div>
